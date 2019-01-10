@@ -31,7 +31,7 @@ func (c SystemPaaSTAConfigFileReader) Read(t interface{}) error {
 	r, err := os.Open(c.FileNameForConfig())
 	defer r.Close()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	return ParseContent(r, t)
 }
