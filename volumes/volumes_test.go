@@ -1,43 +1,27 @@
 package volumes
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"io"
 	"reflect"
 	"testing"
 )
 
-type fakereader struct {
-	r    io.Reader
-	data map[string]interface{}
+type FakeConfigReader struct {
+	data VolumeConfig
 }
 
-func (f fakereader) Read(b []byte) (n int, err error) {
-	return f.r.Read(b)
+func (f FakeConfigReader) Read(t interface{}) error {
+	t = f.data
+	return nil
 }
 
-func fakeDataReader() fakereader {
-	data := map[string]interface{}{"volumes": []Volume{Volume{
-		HostPath:      "/nail/etc/mrjob",
-		ContainerPath: "/nail/etc/mrjob",
-		Mode:          "RO",
-	}}}
-	content, _ := json.Marshal(data)
-	return fakereader{
-		data: data,
-		r:    bytes.NewReader(content),
-	}
-}
-
-func TestReadDefaultVolumes(t *testing.T) {
-	fakeData := fakeDataReader()
-	result, err := ReadDefaultVolumes(fakeData)
+func TestDefaultVolumesFromFile(t *testing.T) {
+	fakeVolumeConfig := VolumeConfig{Volumes: []Volume{Volume{HostPath: "/foo", ContainerPath: "/bar", Mode: "RO"}}}
+	reader := &FakeConfigReader{data: fakeVolumeConfig}
+	actual, err := DefaultVolumesFromReader(reader)
 	if err != nil {
-		t.Errorf("failed to decode environment")
+		t.Errorf("failed to read config")
 	}
-	if !reflect.DeepEqual(result, fakeData.data["volumes"]) {
-		t.Errorf("environment was incorrect, got: %s, want: %s.", fakeData.data["volumes"], result)
+	if reflect.DeepEqual(actual, fakeVolumeConfig.Volumes) {
+		t.Errorf("volumes incorrect, got: %s, want: %s.", actual, fakeVolumeConfig.Volumes)
 	}
 }
