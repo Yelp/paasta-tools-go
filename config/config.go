@@ -19,6 +19,9 @@ type SystemPaaSTAConfigFileReader struct {
 
 func ParseContent(r io.Reader, t interface{}) error {
 	buf, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
 	err = json.Unmarshal(buf, t)
 	return err
 }
