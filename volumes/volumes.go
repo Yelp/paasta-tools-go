@@ -1,7 +1,6 @@
 package volumes
 
 import (
-	"fmt"
 	"git.yelpcorp.com/paasta-tools-go/config"
 )
 
@@ -17,6 +16,6 @@ type Volume struct {
 
 func DefaultVolumesFromReader(c config.ConfigReader) (volumes []Volume, err error) {
 	volumeConfig := VolumeConfig{}
-	err := c.Read(volumeConfig)
+	err = c.Read(volumeConfig)
 	return volumeConfig.Volumes, err
 }
