@@ -1,4 +1,4 @@
-module git.yelpcorp.com/paasta-tools-go
+module github.com/Yelp/paasta-tools-go
 
 require (
 	golang.org/x/lint v0.0.0-20181217174547-8f45f776aaf1 // indirect

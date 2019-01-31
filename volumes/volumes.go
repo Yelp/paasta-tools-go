@@ -1,7 +1,7 @@
 package volumes
 
 import (
-	"git.yelpcorp.com/paasta-tools-go/config"
+	"github.com/Yelp/paasta-tools-go/config"
 )
 
 type VolumeConfig struct {
