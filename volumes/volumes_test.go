@@ -14,7 +14,7 @@ func (f FakeConfigReader) Read(t interface{}) error {
 	return nil
 }
 
-func TestDefaultVolumesFromFile(t *testing.T) {
+func TestDefaultVolumesFromReader(t *testing.T) {
 	fakeVolumeConfig := VolumeConfig{Volumes: []Volume{Volume{HostPath: "/foo", ContainerPath: "/bar", Mode: "RO"}}}
 	reader := &FakeConfigReader{data: fakeVolumeConfig}
 	actual, err := DefaultVolumesFromReader(reader)
