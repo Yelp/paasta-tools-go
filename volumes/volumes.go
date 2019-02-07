@@ -15,7 +15,7 @@ type Volume struct {
 }
 
 func DefaultVolumesFromReader(c config.ConfigReader) (volumes []Volume, err error) {
-	volumeConfig := VolumeConfig{}
+	volumeConfig := &VolumeConfig{}
 	err = c.Read(volumeConfig)
 	return volumeConfig.Volumes, err
 }
