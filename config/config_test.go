@@ -13,35 +13,35 @@ type FakeConfig struct {
 }
 
 type fakereader struct {
-	r    io.Reader
-	data *FakeConfig
+	reader io.Reader
+	data   *FakeConfig
 }
 
-func (f fakereader) Read(b []byte) (n int, err error) {
-	return f.r.Read(b)
+func (fakereader fakereader) Read(bytes []byte) (n int, err error) {
+	return fakereader.reader.Read(bytes)
 }
 
-func fakeDataReader(c *FakeConfig) fakereader {
-	content, _ := json.Marshal(*c)
+func fakeDataReader(config *FakeConfig) fakereader {
+	content, _ := json.Marshal(*config)
 	return fakereader{
-		data: c,
-		r:    bytes.NewReader(content),
+		data:   config,
+		reader: bytes.NewReader(content),
 	}
 }
 
-func TestParseContent(t *testing.T) {
+func TestParseContent(test *testing.T) {
 	fakeData := &FakeConfig{}
 	reader := fakeDataReader(fakeData)
 	err := ParseContent(reader, fakeData)
 	if err != nil {
-		t.Errorf("failed to decode content")
+		test.Errorf("failed to decode content")
 	}
 	if !reflect.DeepEqual(reader.data, fakeData) {
-		t.Errorf("deserialized content was incorrect, got: %s, want: %s.", reader.data, fakeData)
+		test.Errorf("deserialized content was incorrect, got: %s, want: %s.", reader.data, fakeData)
 	}
 }
 
-func TestFileNameForConfig(t *testing.T) {
+func TestFileNameForConfig(test *testing.T) {
 	reader := SystemPaaSTAConfigFileReader{
 		Basedir:  "/etc/paasta",
 		Filename: "volumes.json",
@@ -49,6 +49,6 @@ func TestFileNameForConfig(t *testing.T) {
 	expected := "/etc/paasta/volumes.json"
 	actual := reader.FileNameForConfig()
 	if actual != expected {
-		t.Errorf("filename incorrect incorrect, got: %s, want: %s.", actual, expected)
+		test.Errorf("filename incorrect incorrect, got: %s, want: %s.", actual, expected)
 	}
 }

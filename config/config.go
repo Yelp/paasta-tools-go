@@ -17,24 +17,24 @@ type SystemPaaSTAConfigFileReader struct {
 	Filename string
 }
 
-func ParseContent(r io.Reader, t interface{}) error {
-	buf, err := ioutil.ReadAll(r)
+func ParseContent(reader io.Reader, content interface{}) error {
+	buf, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return err
 	}
-	err = json.Unmarshal(buf, t)
+	err = json.Unmarshal(buf, content)
 	return err
 }
 
-func (c SystemPaaSTAConfigFileReader) FileNameForConfig() string {
-	return path.Join(c.Basedir, c.Filename)
+func (configReader SystemPaaSTAConfigFileReader) FileNameForConfig() string {
+	return path.Join(configReader.Basedir, configReader.Filename)
 }
 
-func (c SystemPaaSTAConfigFileReader) Read(t interface{}) error {
-	r, err := os.Open(c.FileNameForConfig())
-	defer r.Close()
+func (configReader SystemPaaSTAConfigFileReader) Read(content interface{}) error {
+	reader, err := os.Open(configReader.FileNameForConfig())
+	defer reader.Close()
 	if err != nil {
 		return err
 	}
-	return ParseContent(r, t)
+	return ParseContent(reader, content)
 }
