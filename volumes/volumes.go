@@ -14,8 +14,8 @@ type Volume struct {
 	Mode          string `json:"mode"`
 }
 
-func DefaultVolumesFromReader(c config.ConfigReader) (volumes []Volume, err error) {
+func DefaultVolumesFromReader(configReader config.ConfigReader) (volumes []Volume, err error) {
 	volumeConfig := &VolumeConfig{}
-	err = c.Read(volumeConfig)
+	err = configReader.Read(volumeConfig)
 	return volumeConfig.Volumes, err
 }
