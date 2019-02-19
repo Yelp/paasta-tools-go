@@ -22,6 +22,6 @@ func TestDefaultVolumesFromReader(test *testing.T) {
 		test.Errorf("failed to read config")
 	}
 	if !reflect.DeepEqual(actual, fakeVolumeConfig.Volumes) {
-		test.Errorf("volumes incorrect, got: %s, want: %s.", actual, fakeVolumeConfig.Volumes)
+		test.Errorf("Expected:\n%+v\nGot:\n%+v", actual, fakeVolumeConfig.Volumes)
 	}
 }
