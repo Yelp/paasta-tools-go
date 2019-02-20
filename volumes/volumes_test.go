@@ -10,7 +10,7 @@ type FakeConfigReader struct {
 }
 
 func (fakereader FakeConfigReader) Read(content interface{}) error {
-	content = fakereader.data
+	*content.(*VolumeConfig) = fakereader.data
 	return nil
 }
 
@@ -21,7 +21,7 @@ func TestDefaultVolumesFromReader(test *testing.T) {
 	if err != nil {
 		test.Errorf("failed to read config")
 	}
-	if reflect.DeepEqual(actual, fakeVolumeConfig.Volumes) {
-		test.Errorf("volumes incorrect, got: %s, want: %s.", actual, fakeVolumeConfig.Volumes)
+	if !reflect.DeepEqual(actual, fakeVolumeConfig.Volumes) {
+		test.Errorf("Expected:\n%+v\nGot:\n%+v", actual, fakeVolumeConfig.Volumes)
 	}
 }
