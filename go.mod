@@ -8,7 +8,7 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	golang.org/x/tools v0.0.0-20190130015043-a06a922acc1b // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	k8s.io/api v0.0.0-20190219093303-35c66765f3ca
+	k8s.io/api v0.0.0-20190202010724-74b699b93c15
 	k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c // indirect
 	k8s.io/klog v0.2.0 // indirect
 )

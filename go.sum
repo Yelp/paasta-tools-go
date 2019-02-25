@@ -17,6 +17,8 @@ golang.org/x/tools v0.0.0-20190130015043-a06a922acc1b h1:U38c0ex5oDn0qj+Wmwi1j4M
 golang.org/x/tools v0.0.0-20190130015043-a06a922acc1b/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 gopkg.in/inf.v0 v0.9.1 h1:73M5CoZyi3ZLMOyDlQh031Cx6N9NDJ2Vvfl76EDAgDc=
 gopkg.in/inf.v0 v0.9.1/go.mod h1:cWUDdTG/fYaXco+Dcufb5Vnc6Gp2YChqWtbxRZE0mXw=
+k8s.io/api v0.0.0-20190202010724-74b699b93c15 h1:AoUGjnJ3PJMFz+Rkp4lx3X+6mPUnY1MESJhbUSGX+pc=
+k8s.io/api v0.0.0-20190202010724-74b699b93c15/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/api v0.0.0-20190219093303-35c66765f3ca h1:OelklCdYl2VwmnY9tcizi6BQ3J3MgyggJ34QW7xX3Ts=
 k8s.io/api v0.0.0-20190219093303-35c66765f3ca/go.mod h1:iuAfoD4hCxJ8Onx9kaTIt30j7jUFS00AXQi6QMi99vA=
 k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c h1:02KEBFny6M5VWKj6Y8Ns27epjefTqLJXD4fvqP5tGFg=
