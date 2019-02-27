@@ -30,6 +30,14 @@ func GetDefaultPaastaKubernetesEnvironment() []corev1.EnvVar {
 				},
 			},
 		},
+		{
+			Name: "PAASTA_CLUSTER",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.labels['yelp.com/paasta_cluster']",
+				},
+			},
+		},
 	}
 	return defaultEnvironment
 }
