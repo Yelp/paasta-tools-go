@@ -1,9 +1,10 @@
 package environment
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	"reflect"
 	"testing"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
@@ -30,6 +31,14 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
 					FieldPath: "metadata.labels['yelp.com/paasta_instance']",
+				},
+			},
+		},
+		{
+			Name: "PAASTA_CLUSTER",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.labels['yelp.com/paasta_cluster']",
 				},
 			},
 		},
