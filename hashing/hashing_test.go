@@ -24,6 +24,100 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 			Labels:    labels,
 		},
 		Spec: appsv1.StatefulSetSpec{
+			Replicas:             &replicas,
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{corev1.PersistentVolumeClaim{}},
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes:    []corev1.Volume{},
+					Containers: []corev1.Container{},
+				},
+			},
+		},
+	}
+	hash, err := ComputeHashForKubernetesObject(someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, hash, "76ffc95c66")
+
+	// to test that a new pointer to a semantically matching object has the same hash
+	theSameReplicas := int32(2)
+	theSameStatefulSet := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "morty-test-cluster",
+			Namespace: "paasta-cassandra",
+			Labels:    labels,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas:             &theSameReplicas,
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{corev1.PersistentVolumeClaim{}},
+			Template: corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Volumes:    []corev1.Volume{},
+					Containers: []corev1.Container{},
+				},
+			},
+		},
+	}
+	anotherHash, err := ComputeHashForKubernetesObject(theSameStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, anotherHash, "76ffc95c66")
+
+	// test the hash changes if we change replicas
+	replicas = int32(1)
+	someStatefulSet.Spec.Replicas = &replicas
+	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, hash, "59cb75c79c")
+
+	// test hash changes if we change labels
+	someStatefulSet.ObjectMeta.Labels["yelp.com/for"] = "everandever"
+	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, hash, "9c45f99")
+
+	// test hash ignores yelp.com/operator_config_hash label
+	someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"] = "somehash"
+	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, hash, "9c45f99")
+
+	// test we get same hash if we pass the actual struct not a pointer
+	hash, err = ComputeHashForKubernetesObject(*someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to calculate hash")
+	}
+	assert.Equal(t, hash, "9c45f99")
+}
+
+func TestAddLabelToMetadata(t *testing.T) {
+	labels := map[string]string{
+		"yelp.com/rick": "andmortyadventures",
+	}
+	replicas := int32(2)
+	someStatefulSet := &appsv1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "morty-test-cluster",
+			Namespace: "paasta-cassandra",
+			Labels:    labels,
+		},
+		Spec: appsv1.StatefulSetSpec{
 			Replicas: &replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
@@ -40,76 +134,20 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 			},
 		},
 	}
-	hash, err := ComputeHashForKubernetesObject(someStatefulSet)
-	if err != nil {
-		t.Errorf("Failed to calculate hash")
-	}
-	assert.Equal(t, hash, "f968dcd9f")
 
-	// to test that a new pointer to a semantically matching object has the same hash
-	theSameReplicas := int32(2)
-	theSameStatefulSet := &appsv1.StatefulSet{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "StatefulSet",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "morty-test-cluster",
-			Namespace: "paasta-cassandra",
-			Labels:    labels,
-		},
-		Spec: appsv1.StatefulSetSpec{
-			Replicas: &theSameReplicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{corev1.PersistentVolumeClaim{}},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Volumes:    []corev1.Volume{},
-					Containers: []corev1.Container{},
-				},
-			},
-		},
-	}
-	anotherHash, err := ComputeHashForKubernetesObject(theSameStatefulSet)
+	labelToAdd := map[string]string{"yelp.com/malcom": "tucker"}
+	err := AddLabelsToMetadata(labelToAdd, someStatefulSet)
 	if err != nil {
-		t.Errorf("Failed to calculate hash")
+		t.Errorf("Failed to add label")
 	}
-	assert.Equal(t, anotherHash, "f968dcd9f")
 
-	// test the hash changes if we change replicas
-	replicas = int32(1)
-	someStatefulSet.Spec.Replicas = &replicas
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
-	if err != nil {
-		t.Errorf("Failed to calculate hash")
-	}
-	assert.Equal(t, hash, "569c7fc7d4")
+	// the new label and existing label are present in ObjectMeta
+	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/malcom"], "tucker")
+	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/rick"], "andmortyadventures")
 
-	// test hash changes if we change labels
-	someStatefulSet.ObjectMeta.Labels["yelp.com/for"] = "everandever"
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
-	if err != nil {
-		t.Errorf("Failed to calculate hash")
-	}
-	assert.Equal(t, hash, "85445d55bb")
-
-	// test hash ignores yelp.com/operator_config_hash label
-	someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"] = "somehash"
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
-	if err != nil {
-		t.Errorf("Failed to calculate hash")
-	}
-	assert.Equal(t, hash, "85445d55bb")
-
-	// test we get same hash if we pass the actual struct not a pointer
-	hash, err = ComputeHashForKubernetesObject(*someStatefulSet)
-	if err != nil {
-		t.Errorf("Failed to calculate hash")
-	}
-	assert.Equal(t, hash, "85445d55bb")
+	// the new label is *not* present on other parts of the kubernetes object
+	assert.NotEqual(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/malcom"], "tucker")
+	assert.NotEqual(t, someStatefulSet.Spec.Template.ObjectMeta.Labels["yelp.com/malcom"], "tucker")
+	// but the existing labels are
+	assert.Equal(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/rick"], "andmortyadventures")
 }
