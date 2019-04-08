@@ -5,4 +5,4 @@ branches:
     - /^travis-.*$/
 language: go
 go:
-  - 1.11
+  - 1.11.4
