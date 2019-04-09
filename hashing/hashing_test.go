@@ -102,7 +102,7 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 	assert.Equal(t, hash, "9c45f99")
 }
 
-func TestAddLabelToMetadata(t *testing.T) {
+func TestSetKubernetesObjectHash(t *testing.T) {
 	labels := map[string]string{
 		"yelp.com/rick": "andmortyadventures",
 	}
@@ -135,19 +135,18 @@ func TestAddLabelToMetadata(t *testing.T) {
 		},
 	}
 
-	labelToAdd := map[string]string{"yelp.com/malcom": "tucker"}
-	err := AddLabelsToMetadata(labelToAdd, someStatefulSet)
+	err := SetKubernetesObjectHash("abc1234", someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to add label")
 	}
 
 	// the new label and existing label are present in ObjectMeta
-	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/malcom"], "tucker")
+	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"], "abc1234")
 	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/rick"], "andmortyadventures")
 
 	// the new label is *not* present on other parts of the kubernetes object
-	assert.NotEqual(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/malcom"], "tucker")
-	assert.NotEqual(t, someStatefulSet.Spec.Template.ObjectMeta.Labels["yelp.com/malcom"], "tucker")
+	assert.NotEqual(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/operator_config_hash"], "abc1234")
+	assert.NotEqual(t, someStatefulSet.Spec.Template.ObjectMeta.Labels["yelp.com/operator_config_hash"], "abc1234")
 	// but the existing labels are
 	assert.Equal(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/rick"], "andmortyadventures")
 }
