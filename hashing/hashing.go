@@ -59,7 +59,10 @@ func ComputeHashForKubernetesObject(object interface{}) (string, error) {
 	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
 }
 
-func AddLabelsToMetadata(labelsToAdd map[string]string, object interface{}) error {
+func SetKubernetesObjectHash(configHash string, object interface{}) error {
+	labelsToAdd := map[string]string{
+		"yelp.com/operator_config_hash": configHash,
+	}
 	value := reflect.ValueOf(object)
 	var objectMeta reflect.Value
 	if value.Kind() == reflect.Ptr {
