@@ -2,73 +2,38 @@ package hashing
 
 import (
 	"fmt"
-	"github.com/fatih/structs"
-	"github.com/mohae/deepcopy"
 	"hash/fnv"
-	"k8s.io/apimachinery/pkg/util/rand"
-	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"reflect"
-	"strings"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/kubernetes/pkg/util/hash"
+	"k8s.io/kubernetes/staging/src/k8s.io/apimachinery/pkg/util/rand"
 )
 
-func ComputeHashForKubernetesObject(object interface{}) (string, error) {
-	// lets be sure we don't mutate the kubernetes object
-	copyOfObject := deepcopy.Copy(object)
-	value := reflect.ValueOf(copyOfObject)
-	var objectMeta reflect.Value
-	if value.Kind() == reflect.Ptr {
-		objectMeta = value.Elem().FieldByName("ObjectMeta")
-	} else if value.Kind() == reflect.Struct {
-		objectMeta = value.FieldByName("ObjectMeta")
-	} else {
-		return "", fmt.Errorf("Must pass Kubernetes Object or pointer to Kubernetes Objcect")
+func ComputeHashForKubernetesObject(object runtime.Object) (string, error) {
+	copy := object.DeepCopyObject()
+	accessor := meta.NewAccessor()
+	labels, err := accessor.Labels(copy)
+	if err != nil {
+		return "", err
 	}
-	// recreate the labels map so we can pass it to the
-	// DeepHashObject function
-	labelsToHash := make(map[string]string)
-	if objectMeta.Kind() == reflect.Struct {
-		labels := objectMeta.FieldByName("Labels")
-		if labels.Kind() == reflect.Map {
-			for _, k := range labels.MapKeys() {
-				v := labels.MapIndex(k)
-				key := k.Interface().(string)
-				// we ignore this so that the already hashed versions will match
-				// the newly calculated versions
-				if key == "yelp.com/operator_config_hash" {
-					continue
-				}
-				labelsToHash[key] = v.Interface().(string)
-			}
+	delete(labels, "yelp.com/operator_config_hash")
+	accessor.SetLabels(copy, labels)
 
-		}
-	}
-	// handy library to turn any struct into map[string]interface{}
-	// so we can easily get the SomethingSpec
-	mapOfObject := structs.Map(copyOfObject)
-	mapToHash := make(map[string]interface{})
-	mapToHash["Labels"] = labelsToHash
-	for k, v := range mapOfObject {
-		// we match on Spec suffix since we don't know if this has
-		// DeploymentSpec PodSpec StatefulSetSpec...
-		if strings.HasSuffix(k, "Spec") {
-			mapToHash[k] = v
-		}
-	}
-	hasher := fnv.New32a()
-	hashutil.DeepHashObject(hasher, mapToHash)
-	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
+	h := fnv.New32a()
+	hash.DeepHashObject(h, copy)
+	return rand.SafeEncodeString(fmt.Sprint(h.Sum32())), nil
 }
 
-func SetKubernetesObjectHash(configHash string, object interface{}) error {
-	labelsToAdd := map[string]string{
-		"yelp.com/operator_config_hash": configHash,
-	}
+func SetKubernetesObjectHash(configHash string, object runtime.Object) error {
 	value := reflect.ValueOf(object)
+	labelsToAdd := map[string]string{"yelp.com/operator_config_hash": configHash}
 	var objectMeta reflect.Value
 	if value.Kind() == reflect.Ptr {
 		objectMeta = value.Elem().FieldByName("ObjectMeta")
 	} else {
-		return fmt.Errorf("Must pass pointer to AddLabelsToMetadata so we can update labels using reflection.")
+		return fmt.Errorf("must pass pointer to AddLabelsToMetadata so we can update labels using reflection")
 	}
 	if objectMeta.Kind() == reflect.Struct {
 		labels := objectMeta.FieldByName("Labels")
