@@ -1,62 +1,49 @@
 package hashing
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/fatih/structs"
-	"github.com/mohae/deepcopy"
 	"hash/fnv"
 	"k8s.io/apimachinery/pkg/util/rand"
-	hashutil "k8s.io/kubernetes/pkg/util/hash"
 	"reflect"
-	"strings"
 )
 
 func ComputeHashForKubernetesObject(object interface{}) (string, error) {
-	// lets be sure we don't mutate the kubernetes object
-	copyOfObject := deepcopy.Copy(object)
-	value := reflect.ValueOf(copyOfObject)
-	var objectMeta reflect.Value
-	if value.Kind() == reflect.Ptr {
-		objectMeta = value.Elem().FieldByName("ObjectMeta")
-	} else if value.Kind() == reflect.Struct {
-		objectMeta = value.FieldByName("ObjectMeta")
+	// By marshaling/unmarshaling the object via JSON we're copying it into a
+	// map, which is easier to manipulate in generic way than structs.
+	if b, err := json.Marshal(object); err != nil {
+		return "", fmt.Errorf("Error while encoding %+v into JSON: %s", object, err)
 	} else {
-		return "", fmt.Errorf("Must pass Kubernetes Object or pointer to Kubernetes Objcect")
-	}
-	// recreate the labels map so we can pass it to the
-	// DeepHashObject function
-	labelsToHash := make(map[string]string)
-	if objectMeta.Kind() == reflect.Struct {
-		labels := objectMeta.FieldByName("Labels")
-		if labels.Kind() == reflect.Map {
-			for _, k := range labels.MapKeys() {
-				v := labels.MapIndex(k)
-				key := k.Interface().(string)
-				// we ignore this so that the already hashed versions will match
-				// the newly calculated versions
-				if key == "yelp.com/operator_config_hash" {
-					continue
-				}
-				labelsToHash[key] = v.Interface().(string)
+		var v map[string]interface{}
+		if err := json.Unmarshal(b, &v); err != nil {
+			return "", fmt.Errorf("Error while decoding JSON %s into an object: %s", v, err)
+		} else {
+			// We need only kind/version/spec and labels excluding the label with the
+			// current hash value while calculating the hash.  Also Kubernetes adds
+			// its own info into `metadata` which we need to ignore.
+			meta := v["metadata"].(map[string]interface{})
+			delete(meta["labels"].(map[string]interface{}), "yelp.com/operator_config_hash")
+			m := map[string]interface{}{
+				"kind":       v["kind"],
+				"apiVersion": v["apiVersion"],
+				"spec":       v["spec"],
+				"metadata": map[string]interface{}{
+					"name":      meta["name"],
+					"namespace": meta["namespace"],
+					"labels":    meta["labels"],
+				},
 			}
-
+			// By using serialized JSON for hashing we're making the hashing process
+			// a bit easier (like having maps always being sorted by keys).
+			if b, err := json.Marshal(m); err != nil {
+				return "", fmt.Errorf("Error while encoding %+v into JSON: %s", m, err)
+			} else {
+				hasher := fnv.New32a()
+				hasher.Write(b)
+				return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
+			}
 		}
 	}
-	// handy library to turn any struct into map[string]interface{}
-	// so we can easily get the SomethingSpec
-	mapOfObject := structs.Map(copyOfObject)
-	mapToHash := make(map[string]interface{})
-	mapToHash["Labels"] = labelsToHash
-	for k, v := range mapOfObject {
-		// we match on Spec suffix since we don't know if this has
-		// DeploymentSpec PodSpec StatefulSetSpec...
-		if strings.HasSuffix(k, "Spec") {
-			mapToHash[k] = v
-		}
-	}
-	hasher := fnv.New32a()
-	hashutil.DeepHashObject(hasher, mapToHash)
-	return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
 }
 
 func SetKubernetesObjectHash(configHash string, object interface{}) error {

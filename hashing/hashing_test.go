@@ -34,11 +34,10 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 			},
 		},
 	}
-	hash, err := ComputeHashForKubernetesObject(someStatefulSet)
+	originalHash, err := ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, hash, "76ffc95c66")
 
 	// to test that a new pointer to a semantically matching object has the same hash
 	theSameReplicas := int32(2)
@@ -67,39 +66,44 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, anotherHash, "76ffc95c66")
+	assert.Equal(t, originalHash, anotherHash)
 
 	// test the hash changes if we change replicas
 	replicas = int32(1)
 	someStatefulSet.Spec.Replicas = &replicas
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	var changedReplicasHash string
+	changedReplicasHash, err = ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, hash, "59cb75c79c")
+	assert.NotEqual(t, originalHash, changedReplicasHash)
 
 	// test hash changes if we change labels
 	someStatefulSet.ObjectMeta.Labels["yelp.com/for"] = "everandever"
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	var changedLabelHash string
+	changedLabelHash, err = ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, hash, "9c45f99")
+	assert.NotEqual(t, originalHash, changedLabelHash)
+	assert.NotEqual(t, changedReplicasHash, changedLabelHash)
 
 	// test hash ignores yelp.com/operator_config_hash label
 	someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"] = "somehash"
-	hash, err = ComputeHashForKubernetesObject(someStatefulSet)
+	var changedSpecialLabelHash string
+	changedSpecialLabelHash, err = ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, hash, "9c45f99")
+	assert.Equal(t, changedLabelHash, changedSpecialLabelHash)
 
 	// test we get same hash if we pass the actual struct not a pointer
-	hash, err = ComputeHashForKubernetesObject(*someStatefulSet)
+	var ptrHash string
+	ptrHash, err = ComputeHashForKubernetesObject(*someStatefulSet)
 	if err != nil {
 		t.Errorf("Failed to calculate hash")
 	}
-	assert.Equal(t, hash, "9c45f99")
+	assert.Equal(t, changedSpecialLabelHash, ptrHash)
 }
 
 func TestSetKubernetesObjectHash(t *testing.T) {
