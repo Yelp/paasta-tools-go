@@ -22,7 +22,12 @@ func ComputeHashForKubernetesObject(object interface{}) (string, error) {
 			// current hash value while calculating the hash.  Also Kubernetes adds
 			// its own info into `metadata` which we need to ignore.
 			meta := v["metadata"].(map[string]interface{})
-			delete(meta["labels"].(map[string]interface{}), "yelp.com/operator_config_hash")
+			labels := meta["labels"]
+			if labels != nil {
+				delete(labels.(map[string]interface{}), "yelp.com/operator_config_hash")
+			} else {
+				labels = make(map[string]interface{})
+			}
 			m := map[string]interface{}{
 				"kind":       v["kind"],
 				"apiVersion": v["apiVersion"],
@@ -30,7 +35,7 @@ func ComputeHashForKubernetesObject(object interface{}) (string, error) {
 				"metadata": map[string]interface{}{
 					"name":      meta["name"],
 					"namespace": meta["namespace"],
-					"labels":    meta["labels"],
+					"labels":    labels,
 				},
 			}
 			// By using serialized JSON for hashing we're making the hashing process
