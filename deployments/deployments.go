@@ -113,25 +113,16 @@ func DeploymentAnnotations(
 	err := configReader.Read(deployments)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"Error config for service %s: %s", serviceName, err,
-		)
-	}
-	if err != nil {
-		return nil, fmt.Errorf(
 			"Error reading deployments for service %s: %s", serviceName, err,
 		)
 	}
-
 	annotations := map[string]string{}
-	deployment, ok := deployments.V2.Deployments[deploymentGroup]
-	if ok {
-		annotations["paasta.yelp.com/git_sha"] = deployment.GitSHA
-	}
 	controlGroup := fmt.Sprintf("%s:%s.%s", serviceName, cluster, instance)
 	control, ok := deployments.V2.Controls[controlGroup]
-	if ok {
-		annotations["paasta.yelp.com/desired_state"] = control.DesiredState
-		annotations["paasta.yelp.com/force_bounce"] = control.ForceBounce
+	if !ok {
+		return nil, fmt.Errorf("Control group %s does not exist", controlGroup)
 	}
+	annotations["paasta.yelp.com/desired_state"] = control.DesiredState
+	annotations["paasta.yelp.com/force_bounce"] = control.ForceBounce
 	return annotations, nil
 }
