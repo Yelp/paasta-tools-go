@@ -26,9 +26,16 @@ type V2DeploymentGroup struct {
 	GitSHA      string `json:"git_sha"`
 }
 
+// V2ControlGroup ...
+type V2ControlGroup struct {
+	DesiredState string `json:"desired_state"`
+	ForceBounce  string `json:"force_bounce"`
+}
+
 // V2DeploymentsConfig ...
 type V2DeploymentsConfig struct {
 	Deployments map[string]V2DeploymentGroup `json:"deployments"`
+	Controls    map[string]V2ControlGroup    `json:"controls"`
 }
 
 // Deployments ...
@@ -91,4 +98,40 @@ func getImageURL(cReader paastaconfig.ConfigReader, deploymentGroup, dockerRepo 
 
 	imageurl := fmt.Sprintf("%s/%s", dockerRepo, deployment.DockerImage)
 	return imageurl, nil
+}
+
+// DeploymentAnnotations returns a map of annotations for the relevant service
+// deployment group
+func DeploymentAnnotations(
+	serviceName, cluster, instance, deploymentGroup string,
+) (map[string]string, error) {
+	configReader := paastaconfig.SystemPaaSTAConfigFileReader{
+		Basedir:  fmt.Sprintf("/nail/etc/services/%s", serviceName),
+		Filename: "deployments.json",
+	}
+	deployments := &Deployments{}
+	err := configReader.Read(deployments)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"Error config for service %s: %s", serviceName, err,
+		)
+	}
+	if err != nil {
+		return nil, fmt.Errorf(
+			"Error reading deployments for service %s: %s", serviceName, err,
+		)
+	}
+
+	annotations := map[string]string{}
+	deployment, ok := deployments.V2.Deployments[deploymentGroup]
+	if ok {
+		annotations["paasta.yelp.com/git_sha"] = deployment.GitSHA
+	}
+	controlGroup := fmt.Sprintf("%s:%s.%s", serviceName, cluster, instance)
+	control, ok := deployments.V2.Controls[controlGroup]
+	if ok {
+		annotations["paasta.yelp.com/desired_state"] = control.DesiredState
+		annotations["paasta.yelp.com/force_bounce"] = control.ForceBounce
+	}
+	return annotations, nil
 }
