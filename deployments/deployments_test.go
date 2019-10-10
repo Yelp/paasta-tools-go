@@ -61,3 +61,44 @@ func TestGetImageURLEmptyReader(test *testing.T) {
 		test.Errorf("Expected to fail for nil interface")
 	}
 }
+
+func TestMakeControlGroup(test *testing.T) {
+	expected := "service:cluster.instance"
+	actual := makeControlGroup("service", "instance", "cluster")
+	if expected != actual {
+		test.Errorf("Expected '%+v', got '%+v'", expected, actual)
+	}
+}
+
+func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
+	fakeDeployments := &Deployments{
+		V2: V2DeploymentsConfig{
+			Controls: map[string]V2ControlGroup{
+				"test-cg": V2ControlGroup{
+					ForceBounce:  "test-bounce",
+					DesiredState: "test-state",
+				},
+			},
+		},
+	}
+	expectedAnns := map[string]string{
+		"paasta.yelp.com/desired_state": "test-state",
+		"paasta.yelp.com/force_bounce":  "test-bounce",
+	}
+	anns, err := deploymentAnnotationsForControlGroup(fakeDeployments, "test-cg")
+	if err != nil {
+		test.Errorf("Expected to not fail: %s", err)
+		return
+	}
+	if len(anns) != len(expectedAnns) {
+		test.Errorf("Expected '%+v', got '%+v'", expectedAnns, anns)
+		return
+	}
+	for k, v := range anns {
+		ev, _ := expectedAnns[k]
+		if v != ev {
+			test.Errorf("Expected %s to be '%+v', got '%+v'", k, ev, v)
+			return
+		}
+	}
+}
