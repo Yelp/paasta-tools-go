@@ -103,24 +103,37 @@ func getImageURL(cReader paastaconfig.ConfigReader, deploymentGroup, dockerRepo 
 // DeploymentAnnotations returns a map of annotations for the relevant service
 // deployment group
 func DeploymentAnnotations(
-	serviceName, cluster, instance, deploymentGroup string,
+	service, cluster, instance, deploymentGroup string,
 ) (map[string]string, error) {
 	configReader := paastaconfig.SystemPaaSTAConfigFileReader{
-		Basedir:  fmt.Sprintf("/nail/etc/services/%s", serviceName),
+		Basedir:  fmt.Sprintf("/nail/etc/services/%s", service),
 		Filename: "deployments.json",
 	}
-	deployments := &Deployments{}
-	err := configReader.Read(deployments)
+	deployments, err := deploymentsFromConfig(configReader)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"Error reading deployments for service %s: %s", serviceName, err,
+			"Error reading deployments for service %s: %s", service, err,
 		)
 	}
+	controlGroup := makeControlGroup(service, instance, cluster)
+	return deploymentAnnotationsForControlGroup(deployments, controlGroup)
+}
+
+func deploymentsFromConfig(cr paastaconfig.SystemPaaSTAConfigFileReader) (*Deployments, error) {
+	deployments := &Deployments{}
+	err := cr.Read(deployments)
+	return deployments, err
+}
+
+func makeControlGroup(service, instance, cluster string) string {
+	return fmt.Sprintf("%s:%s.%s", service, cluster, instance)
+}
+
+func deploymentAnnotationsForControlGroup(ds *Deployments, cg string) (map[string]string, error) {
 	annotations := map[string]string{}
-	controlGroup := fmt.Sprintf("%s:%s.%s", serviceName, cluster, instance)
-	control, ok := deployments.V2.Controls[controlGroup]
+	control, ok := ds.V2.Controls[cg]
 	if !ok {
-		return nil, fmt.Errorf("Control group %s does not exist", controlGroup)
+		return nil, fmt.Errorf("Control group %s does not exist", cg)
 	}
 	annotations["paasta.yelp.com/desired_state"] = control.DesiredState
 	annotations["paasta.yelp.com/force_bounce"] = control.ForceBounce
