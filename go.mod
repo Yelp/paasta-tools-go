@@ -8,6 +8,7 @@ require (
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.3.0
+	github.com/subosito/gotenv v1.2.0 // indirect
 	golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3 // indirect
 	golang.org/x/text v0.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
