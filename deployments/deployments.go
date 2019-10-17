@@ -69,13 +69,14 @@ func DockerImageURLForService(serviceName, deploymentGroup string) (string, erro
 	}
 	registry, err := getDockerRegistry()
 	if err != nil {
-		return "", fmt.Errorf("Failed to get docker registry")
+		return "", fmt.Errorf("Failed to get docker registry: %s", err)
 	}
 	image, err = getImageURL(configReader, deploymentGroup, registry)
 	if err != nil {
 		return "", fmt.Errorf(
-			"Unable to read from deployments.json for %s",
+			"Unable to read from deployments.json for %s: %s",
 			serviceName,
+			err,
 		)
 	}
 	return image, nil
