@@ -2,7 +2,7 @@ package volumes
 
 import (
 	"fmt"
-	paastaconfig "github.com/Yelp/paasta-tools-go/config"
+	paastaconfig "github.com/Yelp/paasta-tools-go/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 	"log"
 	"strings"
