@@ -17,7 +17,7 @@ package deployments
 import (
 	"fmt"
 
-	paastaconfig "github.com/Yelp/paasta-tools-go/config"
+	paastaconfig "github.com/Yelp/paasta-tools-go/pkg/config"
 )
 
 // V2DeploymentGroup ...
