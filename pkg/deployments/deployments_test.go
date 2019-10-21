@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	paastaconfig "github.com/Yelp/paasta-tools-go/config"
+	paastaconfig "github.com/Yelp/paasta-tools-go/pkg/config"
 )
 
 const (
