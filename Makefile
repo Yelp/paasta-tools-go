@@ -1,12 +1,12 @@
 DOCKER_RUN=docker run -t -v $(CURDIR):/work:rw paasta-deb-builder-$*
-TOOLS_PACKAGE=$(wildcard tools/*)
+CMDS=$(wildcard cmd/*)
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
 VERSION=0.0.1
 
-.PHONY: tools $(TOOLS_PACKAGE)
+.PHONY: cmd $(CMDS)
 
 all: build test
 test:
@@ -18,11 +18,11 @@ build:
 clean:
 	rm -rf bin
 
-tools: tools/*
+cmd: cmd/*
 
-$(TOOLS_PACKAGE): 
+$(CMDS): 
 	[ -d bin ] || mkdir -p bin
-	GO111MODULE=on go build -o bin/paasta-tools-$(subst tools/,,$@) $@/*.go
+	GO111MODULE=on go build -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
 
 docker_build_%:
 	@echo "Building build docker image for $*"
@@ -31,7 +31,7 @@ docker_build_%:
 
 deb_%: clean docker_build_%
 	$(DOCKER_RUN) /bin/bash -c ' \
-		$(MAKE) tools && \
+		$(MAKE) cmd && \
 		fpm --output-type deb --input-type dir --version $(VERSION) \
 			--deb-dist $* --deb-priority optional \
 			--name paasta-tools-go --package dist \
