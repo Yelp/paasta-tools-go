@@ -22,7 +22,7 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 			Name: "PAASTA_SERVICE",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.labels['yelp.com/paasta_service']",
+					FieldPath: "metadata.labels['paasta.yelp.com/service']",
 				},
 			},
 		},
@@ -30,7 +30,7 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 			Name: "PAASTA_INSTANCE",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.labels['yelp.com/paasta_instance']",
+					FieldPath: "metadata.labels['paasta.yelp.com/instance']",
 				},
 			},
 		},
@@ -38,7 +38,7 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 			Name: "PAASTA_CLUSTER",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "metadata.labels['yelp.com/paasta_cluster']",
+					FieldPath: "metadata.labels['paasta.yelp.com/cluster']",
 				},
 			},
 		},
