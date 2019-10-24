@@ -42,7 +42,7 @@ func TestParseContent(test *testing.T) {
 }
 
 func TestFileNameForConfig(test *testing.T) {
-	reader := SystemPaaSTAConfigFileReader{
+	reader := ConfigFileReader{
 		Basedir:  "/etc/paasta",
 		Filename: "volumes.json",
 	}

@@ -12,7 +12,7 @@ type ConfigReader interface {
 	Read(interface{}) error
 }
 
-type SystemPaaSTAConfigFileReader struct {
+type ConfigFileReader struct {
 	Basedir  string
 	Filename string
 }
@@ -26,11 +26,11 @@ func ParseContent(reader io.Reader, content interface{}) error {
 	return err
 }
 
-func (configReader SystemPaaSTAConfigFileReader) FileNameForConfig() string {
+func (configReader ConfigFileReader) FileNameForConfig() string {
 	return path.Join(configReader.Basedir, configReader.Filename)
 }
 
-func (configReader SystemPaaSTAConfigFileReader) Read(content interface{}) error {
+func (configReader ConfigFileReader) Read(content interface{}) error {
 	reader, err := os.Open(configReader.FileNameForConfig())
 	defer reader.Close()
 	if err != nil {

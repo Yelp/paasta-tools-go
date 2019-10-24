@@ -16,8 +16,9 @@ package deployments
 
 import (
 	"fmt"
+	"path"
 
-	paastaconfig "github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/config"
 )
 
 // V2DeploymentGroup ...
@@ -48,43 +49,60 @@ type DockerRegistry struct {
 	Registry string `json:"docker_registry"`
 }
 
-func getDockerRegistry() (string, error) {
-	dockerRegistry := &DockerRegistry{}
-	configreader := paastaconfig.SystemPaaSTAConfigFileReader{
-		Basedir:  fmt.Sprintf("/etc/paasta"),
-		Filename: "docker_registry.json",
+type ImageProvider interface {
+	DockerImageURLForDeployGroup(deploymentGroup string) (string, error)
+}
+
+type DefaultImageProvider struct {
+	Service           string
+	RegistryURLReader config.ConfigReader
+	ImageReader       config.ConfigReader
+}
+
+func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
+	imageReader := config.ConfigFileReader{
+		Basedir:  path.Join("/nail/etc/services", service),
+		Filename: "deployments.json",
 	}
-	err := configreader.Read(dockerRegistry)
+	registryURLReader := config.ConfigFileReader{
+		Basedir:  "/etc/paasta",
+		Filename: "registry.json",
+	}
+	return &DefaultImageProvider{
+		Service:           service,
+		RegistryURLReader: registryURLReader,
+		ImageReader:       imageReader,
+	}
+}
+
+// DockerImageURLForService returns pullable docker image URL
+func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGroup string) (string, error) {
+	var image string
+	registry, err := provider.getDockerRegistry()
+	if err != nil {
+		return "", fmt.Errorf("Failed to get docker registry: %s", err)
+	}
+	image, err = provider.getImageForDeployGroup(deploymentGroup)
+	if err != nil {
+		return "", fmt.Errorf(
+			"Unable to read from deployments.json for %s: %s",
+			provider.Service, err,
+		)
+	}
+
+	return fmt.Sprintf("%s/%s", registry, image), nil
+}
+
+func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
+	dockerRegistry := &DockerRegistry{}
+	err := provider.RegistryURLReader.Read(dockerRegistry)
 	return dockerRegistry.Registry, err
 
 }
 
-// DockerImageURLForService returns pullable docker image URL
-// for service given a deployment.
-func DockerImageURLForService(serviceName, deploymentGroup string) (string, error) {
-	var image string
-	configReader := paastaconfig.SystemPaaSTAConfigFileReader{
-		Basedir:  fmt.Sprintf("/nail/etc/services/%s", serviceName),
-		Filename: "deployments.json",
-	}
-	registry, err := getDockerRegistry()
-	if err != nil {
-		return "", fmt.Errorf("Failed to get docker registry: %s", err)
-	}
-	image, err = getImageURL(configReader, deploymentGroup, registry)
-	if err != nil {
-		return "", fmt.Errorf(
-			"Unable to read from deployments.json for %s: %s",
-			serviceName,
-			err,
-		)
-	}
-	return image, nil
-}
-
-func getImageURL(cReader paastaconfig.ConfigReader, deploymentGroup, dockerRepo string) (string, error) {
+func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup string) (string, error) {
 	deployments := &Deployments{}
-	err := cReader.Read(deployments)
+	err := provider.ImageReader.Read(deployments)
 	if err != nil {
 		return "", err
 	}
@@ -96,9 +114,7 @@ func getImageURL(cReader paastaconfig.ConfigReader, deploymentGroup, dockerRepo 
 			deploymentGroup, deployments,
 		)
 	}
-
-	imageurl := fmt.Sprintf("%s/%s", dockerRepo, deployment.DockerImage)
-	return imageurl, nil
+	return deployment.DockerImage, nil
 }
 
 // DeploymentAnnotations returns a map of annotations for the relevant service
@@ -106,7 +122,7 @@ func getImageURL(cReader paastaconfig.ConfigReader, deploymentGroup, dockerRepo 
 func DeploymentAnnotations(
 	service, cluster, instance, deploymentGroup string,
 ) (map[string]string, error) {
-	configReader := paastaconfig.SystemPaaSTAConfigFileReader{
+	configReader := config.ConfigFileReader{
 		Basedir:  fmt.Sprintf("/nail/etc/services/%s", service),
 		Filename: "deployments.json",
 	}
@@ -120,7 +136,7 @@ func DeploymentAnnotations(
 	return deploymentAnnotationsForControlGroup(deployments, controlGroup)
 }
 
-func deploymentsFromConfig(cr paastaconfig.SystemPaaSTAConfigFileReader) (*Deployments, error) {
+func deploymentsFromConfig(cr config.ConfigFileReader) (*Deployments, error) {
 	deployments := &Deployments{}
 	err := cr.Read(deployments)
 	return deployments, err
