@@ -66,7 +66,7 @@ func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
 	}
 	registryURLReader := config.ConfigFileReader{
 		Basedir:  "/etc/paasta",
-		Filename: "registry.json",
+		Filename: "docker_registry.json",
 	}
 	return &DefaultImageProvider{
 		Service:           service,
