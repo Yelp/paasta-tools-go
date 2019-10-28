@@ -78,25 +78,25 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 }
 
 func (in *PaastaContainerSpec) DeepCopyInto(out *PaastaContainerSpec) {
-    *out = *in
-    if in.CPU != nil {
-        in, out := &in.CPU, &out.CPU
-        *out = new(KubeResourceQuantity)
-        **out = **in
-    }
-    if in.Memory != nil {
-        in, out := &in.Memory, &out.Memory
-        *out = new(KubeResourceQuantity)
-        **out = **in
-    }
-    return
+	*out = *in
+	if in.CPU != nil {
+		in, out := &in.CPU, &out.CPU
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
+	if in.Memory != nil {
+		in, out := &in.Memory, &out.Memory
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
+	return
 }
 
 func (in *PaastaContainerSpec) DeepCopy() *PaastaContainerSpec {
-    if in == nil {
-        return nil
-    }
-    out := new(PaastaContainerSpec)
-    in.DeepCopyInto(out)
-    return out
+	if in == nil {
+		return nil
+	}
+	out := new(PaastaContainerSpec)
+	in.DeepCopyInto(out)
+	return out
 }
