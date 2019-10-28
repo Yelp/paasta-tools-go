@@ -59,8 +59,8 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 		memory = defaultMemory
 	}
 	if _, err := strconv.Atoi(string(memory)); err == nil {
-		// memory value looks like a number, let's treat it as MB according to PaaSTA default
-		memory = memory + "M"
+		// value looks like a number, let's treat it as MB according to PaaSTA default
+		memory = memory + "Mi"
 	}
 	memoryQuantity, err := resource.ParseQuantity(string(memory))
 	if err != nil {
