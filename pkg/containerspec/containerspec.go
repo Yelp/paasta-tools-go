@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	defaultCPU          = KubeResourceQuantity("0.1")
-	defaultMemory       = KubeResourceQuantity("512Mi")
-	defaultDisk         = KubeResourceQuantity("1024Mi")
+	defaultCPU    = KubeResourceQuantity("0.1")
+	defaultMemory = KubeResourceQuantity("512Mi")
+	defaultDisk   = KubeResourceQuantity("1024Mi")
 )
 
 // KubeResourceQuantity : Resource quantity for Kubernetes (e.g.; CPU, mem, disk)
 type KubeResourceQuantity string
 
-func (n* KubeResourceQuantity) withSuffix() KubeResourceQuantity {
+func (n *KubeResourceQuantity) withSuffix() KubeResourceQuantity {
 	if _, err := strconv.Atoi(string(*n)); err == nil {
 		// value looks like a number, let's treat it as MB according to PaaSTA default
 		return *n + "Mi"
