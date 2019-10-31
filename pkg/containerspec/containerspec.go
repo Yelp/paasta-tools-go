@@ -11,12 +11,20 @@ import (
 
 const (
 	defaultCPU    = KubeResourceQuantity("0.1")
-	defaultMemory = KubeResourceQuantity("512")
-	defaultDisk   = KubeResourceQuantity("1024")
+	defaultMemory = KubeResourceQuantity("512Mi")
+	defaultDisk   = KubeResourceQuantity("1024Mi")
 )
 
 // KubeResourceQuantity : Resource quantity for Kubernetes (e.g.; CPU, mem, disk)
 type KubeResourceQuantity string
+
+func (n *KubeResourceQuantity) withSuffix() KubeResourceQuantity {
+	if _, err := strconv.Atoi(string(*n)); err == nil {
+		// value looks like a number, let's treat it as MB according to PaaSTA default
+		return *n + "Mi"
+	}
+	return *n
+}
 
 // UnmarshalJSON : unmarshal the JSON representation of a KubeResourceQuantity
 func (n *KubeResourceQuantity) UnmarshalJSON(b []byte) error {
@@ -34,9 +42,10 @@ func (n KubeResourceQuantity) MarshalJSON() ([]byte, error) {
 
 // PaastaContainerSpec : Spec for any paasta container with basic fields and utilities
 type PaastaContainerSpec struct {
-	CPU    *KubeResourceQuantity `json:"cpus"`
-	Memory *KubeResourceQuantity `json:"mem"`
-	Disk   *KubeResourceQuantity `json:"disk"`
+	CPU       *KubeResourceQuantity `json:"cpus"`
+	Memory    *KubeResourceQuantity `json:"mem"`
+	Disk      *KubeResourceQuantity `json:"disk"`
+	DiskLimit *KubeResourceQuantity `json:"disk_limit,omitempty"`
 }
 
 // GetContainerResources : get resource requirements based on the container spec
@@ -54,13 +63,9 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 
 	var memory KubeResourceQuantity
 	if spec.Memory != nil {
-		memory = *spec.Memory
+		memory = spec.Memory.withSuffix()
 	} else {
 		memory = defaultMemory
-	}
-	if _, err := strconv.Atoi(string(memory)); err == nil {
-		// value looks like a number, let's treat it as MB according to PaaSTA default
-		memory = memory + "Mi"
 	}
 	memoryQuantity, err := resource.ParseQuantity(string(memory))
 	if err != nil {
@@ -69,17 +74,26 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 
 	var disk KubeResourceQuantity
 	if spec.Disk != nil {
-		disk = *spec.Disk
+		disk = spec.Disk.withSuffix()
 	} else {
 		disk = defaultDisk
-	}
-	if _, err := strconv.Atoi(string(disk)); err == nil {
-		// value looks like a number, let's treat it as MB according to PaaSTA default
-		disk = disk + "Mi"
 	}
 	diskQuantity, err := resource.ParseQuantity(string(disk))
 	if err != nil {
 		return nil, fmt.Errorf("error while parsing disk '%s': %s", disk, err)
+	}
+
+	var diskLimit KubeResourceQuantity
+	if spec.DiskLimit != nil {
+		diskLimit = spec.DiskLimit.withSuffix()
+	} else {
+		diskLimit = disk
+	}
+	diskLimitQuantity, err := resource.ParseQuantity(string(diskLimit))
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing disk limit '%s': %s", diskLimit, err)
+	} else if diskLimitQuantity.Value() < diskQuantity.Value() {
+		return nil, fmt.Errorf("disk limit '%s' must not be smaller than disk '%s'", diskLimit, disk)
 	}
 
 	return &corev1.ResourceRequirements{
@@ -91,7 +105,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:              cpuQuantity,
 			corev1.ResourceMemory:           memoryQuantity,
-			corev1.ResourceEphemeralStorage: diskQuantity,
+			corev1.ResourceEphemeralStorage: diskLimitQuantity,
 		},
 	}, nil
 }
@@ -113,7 +127,11 @@ func (in *PaastaContainerSpec) DeepCopyInto(out *PaastaContainerSpec) {
 		*out = new(KubeResourceQuantity)
 		**out = **in
 	}
-	return
+	if in.DiskLimit != nil {
+		in, out := &in.DiskLimit, &out.DiskLimit
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
 }
 
 func (in *PaastaContainerSpec) DeepCopy() *PaastaContainerSpec {
