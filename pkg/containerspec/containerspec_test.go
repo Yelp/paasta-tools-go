@@ -6,6 +6,38 @@ import (
 	"testing"
 )
 
+func TestDeepCopy(t *testing.T) {
+	in := `{"cpus":"0.25","mem":"2048","disk":"10240","disk_limit":"102400"}`
+	var spec PaastaContainerSpec
+	if err := json.Unmarshal([]byte(in), &spec); err != nil {
+		t.Errorf("Failed to unmarshal: %s", err)
+	}
+	spec2 := spec.DeepCopy()
+	*spec.CPU = "x"
+	if *spec2.CPU == "x" {
+		t.Errorf("Detected shallow copy of CPU")
+	}
+	*spec.Memory = "x"
+	if *spec2.Memory == "x" {
+		t.Errorf("Detected shallow copy of Memory")
+	}
+	*spec.Disk = "x"
+	if *spec2.Disk == "x" {
+		t.Errorf("Detected shallow copy of Disk")
+	}
+	*spec.DiskLimit = "x"
+	if *spec2.DiskLimit == "x" {
+		t.Errorf("Detected shallow copy of DiskLimit")
+	}
+	out, err := json.Marshal(spec2);
+	if err != nil {
+		t.Errorf("Failed to marshal: %s", err)
+	}
+	if string(out) != in {
+		t.Errorf("%s != %s", out, in)
+	}
+}
+
 func TestUnmarshal(t *testing.T) {
 	cpu := KubeResourceQuantity("0.2")
 	mem := KubeResourceQuantity("1024")
@@ -50,38 +82,10 @@ func TestUnmarshalNull(t *testing.T) {
 func checkDeepCopy(t *testing.T, input string) {
 	in := []byte(input)
 	var spec PaastaContainerSpec
-	if err := json.Unmarshal([]byte(in), &spec); err != nil {
+	if err := json.Unmarshal(in, &spec); err != nil {
 		t.Errorf("Failed to unmarshal: %s", err)
 	}
 	spec2 := spec.DeepCopy()
-	if spec.CPU != nil {
-		*spec.CPU = "x"
-		if *spec2.CPU == "x" {
-			t.Errorf("Detected shallow copy of CPU")
-			return
-		}
-	}
-	if spec.Memory != nil {
-		*spec.Memory = "x"
-		if *spec2.Memory == "x" {
-			t.Errorf("Detected shallow copy of Memory")
-			return
-		}
-	}
-	if spec.Disk != nil {
-		*spec.Disk = "x"
-		if *spec2.Disk == "x" {
-			t.Errorf("Detected shallow copy of Disk")
-			return
-		}
-	}
-	if spec.DiskLimit != nil {
-		*spec.DiskLimit = "x"
-		if *spec2.DiskLimit == "x" {
-			t.Errorf("Detected shallow copy of DiskLimit")
-			return
-		}
-	}
 	out, err := json.Marshal(spec2);
 	if err != nil {
 		t.Errorf("Failed to marshal: %s", err)

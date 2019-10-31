@@ -132,7 +132,6 @@ func (in *PaastaContainerSpec) DeepCopyInto(out *PaastaContainerSpec) {
 		*out = new(KubeResourceQuantity)
 		**out = **in
 	}
-	return
 }
 
 func (in *PaastaContainerSpec) DeepCopy() *PaastaContainerSpec {
