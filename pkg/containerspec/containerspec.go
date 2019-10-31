@@ -34,9 +34,10 @@ func (n KubeResourceQuantity) MarshalJSON() ([]byte, error) {
 
 // PaastaContainerSpec : Spec for any paasta container with basic fields and utilities
 type PaastaContainerSpec struct {
-	CPU    *KubeResourceQuantity `json:"cpus"`
-	Memory *KubeResourceQuantity `json:"mem"`
-	Disk   *KubeResourceQuantity `json:"disk"`
+	CPU       *KubeResourceQuantity `json:"cpus"`
+	Memory    *KubeResourceQuantity `json:"mem"`
+	Disk      *KubeResourceQuantity `json:"disk"`
+	DiskLimit *KubeResourceQuantity `json:"disk_limit"`
 }
 
 // GetContainerResources : get resource requirements based on the container spec
@@ -82,6 +83,20 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 		return nil, fmt.Errorf("error while parsing disk '%s': %s", disk, err)
 	}
 
+	var diskLimit KubeResourceQuantity
+	if spec.DiskLimit != nil {
+		diskLimit = *spec.DiskLimit
+	} else {
+		// Default disk limit is 10 * disk, which we have to calculate here
+		value := diskQuantity.Value()
+		value *= 10
+		diskLimit = KubeResourceQuantity(resource.NewQuantity(value, diskQuantity.Format).String())
+	}
+	diskLimitQuantity, err := resource.ParseQuantity(string(diskLimit))
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing disk limit '%s': %s", diskLimit, err)
+	}
+
 	return &corev1.ResourceRequirements{
 		Requests: corev1.ResourceList{
 			corev1.ResourceCPU:              cpuQuantity,
@@ -91,7 +106,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 		Limits: corev1.ResourceList{
 			corev1.ResourceCPU:              cpuQuantity,
 			corev1.ResourceMemory:           memoryQuantity,
-			corev1.ResourceEphemeralStorage: diskQuantity,
+			corev1.ResourceEphemeralStorage: diskLimitQuantity,
 		},
 	}, nil
 }

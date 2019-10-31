@@ -66,40 +66,47 @@ func checkDeepCopy(t *testing.T, input string) {
 func TestEmptyDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":null,"disk":null}`,
+		`{"cpus":null,"mem":null,"disk":null,"disk_limit":null}`,
 	)
 }
 
 func TestOnlyCPUDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":"0.5","mem":null,"disk":null}`,
+		`{"cpus":"0.5","mem":null,"disk":null,"disk_limit":null}`,
 	)
 }
 
 func TestOnlyMemDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":"2048","disk":null}`,
+		`{"cpus":null,"mem":"2048","disk":null,"disk_limit":null}`,
 	)
 }
 
 func TestOnlyDiskDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":null,"disk":"10240"}`,
+		`{"cpus":null,"mem":null,"disk":"10240","disk_limit":null}`,
+	)
+}
+
+func TestOnlyDiskLimitDeepCopy(t *testing.T) {
+	checkDeepCopy(
+		t,
+		`{"cpus":null,"mem":null,"disk":null,"disk_limit":"10240"}`,
 	)
 }
 
 func TestAllDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":"0.25","mem":"2048","disk":"10240"}`,
+		`{"cpus":"0.25","mem":"2048","disk":"10240","disk_limit":"102400"}`,
 	)
 }
 
 func TestJSONRoundTrip(t *testing.T) {
-	in := `{"cpus":"0.2","mem":"1024","disk":"4096"}`
+	in := `{"cpus":"0.2","mem":"1024","disk":"4096","disk_limit":"4Gi"}`
 	var spec PaastaContainerSpec
 	if err := json.Unmarshal([]byte(in), &spec); err != nil {
 		t.Errorf("Failed to unmarshal: %s", err)
@@ -136,7 +143,7 @@ func TestEmptyResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		"{}",
-		`{"limits":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"10Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
 	)
 }
 
@@ -144,7 +151,7 @@ func TestOnlyCPUResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"cpus":"0.5"}`,
-		`{"limits":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"},"requests":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"500m","ephemeral-storage":"10Gi","memory":"512Mi"},"requests":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
 	)
 }
 
@@ -152,7 +159,7 @@ func TestOnlyMemResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"mem":"1024"}`,
-		`{"limits":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"10Gi","memory":"1Gi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
 	)
 }
 
@@ -160,7 +167,23 @@ func TestOnlyDiskResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"disk":"2000"}`,
-		`{"limits":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"20000Mi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"}}`,
+	)
+}
+
+func TestOnlyDiskResourcesBin(t *testing.T) {
+	checkEqualResources(
+		t,
+		`{"disk":"2048"}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"20Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2Gi","memory":"512Mi"}}`,
+	)
+}
+
+func TestBothDiskLimitDiskResources(t *testing.T) {
+	checkEqualResources(
+		t,
+		`{"disk":"2000Mi","disk_limit":"20Gi"}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"20Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"}}`,
 	)
 }
 
@@ -168,14 +191,14 @@ func TestBothMemCPUResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"cpus":"0.2","mem":"1024"}`,
-		`{"limits":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
+		`{"limits":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
 	)
 }
 
 func TestAllResources(t *testing.T) {
 	checkEqualResources(
 		t,
-		`{"cpus":"0.2","mem":"1024","disk":"10Gi"}`,
-		`{"limits":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"}}`,
+		`{"cpus":"0.2","mem":"1024","disk":"10Gi","disk_limit":"2048Gi"}`,
+		`{"limits":{"cpu":"200m","ephemeral-storage":"2Ti","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"}}`,
 	)
 }
