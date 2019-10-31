@@ -171,7 +171,7 @@ func TestEmptyResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		"{}",
-		`{"limits":{"cpu":"100m","ephemeral-storage":"10Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
 	)
 }
 
@@ -179,7 +179,7 @@ func TestOnlyCPUResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"cpus":"0.5"}`,
-		`{"limits":{"cpu":"500m","ephemeral-storage":"10Gi","memory":"512Mi"},"requests":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"},"requests":{"cpu":"500m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
 	)
 }
 
@@ -187,7 +187,7 @@ func TestOnlyMemResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"mem":"1024"}`,
-		`{"limits":{"cpu":"100m","ephemeral-storage":"10Gi","memory":"1Gi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
 	)
 }
 
@@ -195,7 +195,7 @@ func TestOnlyDiskResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"disk":"2000"}`,
-		`{"limits":{"cpu":"100m","ephemeral-storage":"20000Mi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2000Mi","memory":"512Mi"}}`,
 	)
 }
 
@@ -203,7 +203,7 @@ func TestOnlyDiskResourcesBin(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"disk":"2048"}`,
-		`{"limits":{"cpu":"100m","ephemeral-storage":"20Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2Gi","memory":"512Mi"}}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"2Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"2Gi","memory":"512Mi"}}`,
 	)
 }
 
@@ -227,7 +227,7 @@ func TestBothMemCPUResources(t *testing.T) {
 	checkEqualResources(
 		t,
 		`{"cpus":"0.2","mem":"1024"}`,
-		`{"limits":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
+		`{"limits":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"1Gi","memory":"1Gi"}}`,
 	)
 }
 
