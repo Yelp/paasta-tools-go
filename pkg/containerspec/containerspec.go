@@ -11,13 +11,21 @@ import (
 
 const (
 	defaultCPU          = KubeResourceQuantity("0.1")
-	defaultMemory       = KubeResourceQuantity("512")
-	defaultDisk         = KubeResourceQuantity("1024")
+	defaultMemory       = KubeResourceQuantity("512Mi")
+	defaultDisk         = KubeResourceQuantity("1024Mi")
 	diskLimitMultiplier = 10
 )
 
 // KubeResourceQuantity : Resource quantity for Kubernetes (e.g.; CPU, mem, disk)
 type KubeResourceQuantity string
+
+func (n* KubeResourceQuantity) withSuffix() KubeResourceQuantity {
+	if _, err := strconv.Atoi(string(*n)); err == nil {
+		// value looks like a number, let's treat it as MB according to PaaSTA default
+		return *n + "Mi"
+	}
+	return *n
+}
 
 // UnmarshalJSON : unmarshal the JSON representation of a KubeResourceQuantity
 func (n *KubeResourceQuantity) UnmarshalJSON(b []byte) error {
@@ -56,13 +64,9 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 
 	var memory KubeResourceQuantity
 	if spec.Memory != nil {
-		memory = *spec.Memory
+		memory = spec.Memory.withSuffix()
 	} else {
 		memory = defaultMemory
-	}
-	if _, err := strconv.Atoi(string(memory)); err == nil {
-		// value looks like a number, let's treat it as MB according to PaaSTA default
-		memory = memory + "Mi"
 	}
 	memoryQuantity, err := resource.ParseQuantity(string(memory))
 	if err != nil {
@@ -71,13 +75,9 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 
 	var disk KubeResourceQuantity
 	if spec.Disk != nil {
-		disk = *spec.Disk
+		disk = spec.Disk.withSuffix()
 	} else {
 		disk = defaultDisk
-	}
-	if _, err := strconv.Atoi(string(disk)); err == nil {
-		// value looks like a number, let's treat it as MB according to PaaSTA default
-		disk = disk + "Mi"
 	}
 	diskQuantity, err := resource.ParseQuantity(string(disk))
 	if err != nil {
@@ -86,11 +86,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 
 	var diskLimit KubeResourceQuantity
 	if spec.DiskLimit != nil {
-		diskLimit = *spec.DiskLimit
-		if _, err := strconv.Atoi(string(diskLimit)); err == nil {
-			// value looks like a number, let's treat it as MB according to PaaSTA default
-			diskLimit = diskLimit + "Mi"
-		}
+		diskLimit = spec.DiskLimit.withSuffix()
 	} else {
 		// Default disk limit is 10 * disk, which we have to calculate here
 		value := diskQuantity.Value()
