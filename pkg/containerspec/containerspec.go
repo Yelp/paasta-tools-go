@@ -38,7 +38,7 @@ type PaastaContainerSpec struct {
 	CPU       *KubeResourceQuantity `json:"cpus"`
 	Memory    *KubeResourceQuantity `json:"mem"`
 	Disk      *KubeResourceQuantity `json:"disk"`
-	DiskLimit *KubeResourceQuantity `json:"disk_limit"`
+	DiskLimit *KubeResourceQuantity `json:"disk_limit,omitempty"`
 }
 
 // GetContainerResources : get resource requirements based on the container spec

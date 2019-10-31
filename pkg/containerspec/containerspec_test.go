@@ -94,28 +94,28 @@ func checkDeepCopy(t *testing.T, input string) {
 func TestEmptyDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":null,"disk":null,"disk_limit":null}`,
+		`{"cpus":null,"mem":null,"disk":null}`,
 	)
 }
 
 func TestOnlyCPUDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":"0.5","mem":null,"disk":null,"disk_limit":null}`,
+		`{"cpus":"0.5","mem":null,"disk":null}`,
 	)
 }
 
 func TestOnlyMemDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":"2048","disk":null,"disk_limit":null}`,
+		`{"cpus":null,"mem":"2048","disk":null}`,
 	)
 }
 
 func TestOnlyDiskDeepCopy(t *testing.T) {
 	checkDeepCopy(
 		t,
-		`{"cpus":null,"mem":null,"disk":"10240","disk_limit":null}`,
+		`{"cpus":null,"mem":null,"disk":"10240"}`,
 	)
 }
 
