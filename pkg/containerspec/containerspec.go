@@ -87,6 +87,10 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 	var diskLimit KubeResourceQuantity
 	if spec.DiskLimit != nil {
 		diskLimit = *spec.DiskLimit
+		if _, err := strconv.Atoi(string(diskLimit)); err == nil {
+			// value looks like a number, let's treat it as MB according to PaaSTA default
+			diskLimit = diskLimit + "Mi"
+		}
 	} else {
 		// Default disk limit is 10 * disk, which we have to calculate here
 		value := diskQuantity.Value()

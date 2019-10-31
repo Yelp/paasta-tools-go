@@ -215,6 +215,14 @@ func TestBothDiskLimitDiskResources(t *testing.T) {
 	)
 }
 
+func TestLimitDiskResources(t *testing.T) {
+	checkEqualResources(
+		t,
+		`{"disk_limit":"20480"}`,
+		`{"limits":{"cpu":"100m","ephemeral-storage":"20Gi","memory":"512Mi"},"requests":{"cpu":"100m","ephemeral-storage":"1Gi","memory":"512Mi"}}`,
+	)
+}
+
 func TestBothMemCPUResources(t *testing.T) {
 	checkEqualResources(
 		t,
