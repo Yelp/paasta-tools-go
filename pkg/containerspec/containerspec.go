@@ -95,6 +95,8 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 	diskLimitQuantity, err := resource.ParseQuantity(string(diskLimit))
 	if err != nil {
 		return nil, fmt.Errorf("error while parsing disk limit '%s': %s", diskLimit, err)
+	} else if diskLimitQuantity.Value() < diskQuantity.Value() {
+		return nil, fmt.Errorf("disk limit '%s' must not be smaller than disk '%s'", diskLimit, disk)
 	}
 
 	return &corev1.ResourceRequirements{

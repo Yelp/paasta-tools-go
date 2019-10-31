@@ -202,3 +202,41 @@ func TestAllResources(t *testing.T) {
 		`{"limits":{"cpu":"200m","ephemeral-storage":"2Ti","memory":"1Gi"},"requests":{"cpu":"200m","ephemeral-storage":"10Gi","memory":"1Gi"}}`,
 	)
 }
+
+func checkResourcesError(t *testing.T, input string) error {
+	in := []byte(input)
+	var spec PaastaContainerSpec
+	if err := json.Unmarshal([]byte(in), &spec); err != nil {
+		t.Errorf("Failed to unmarshal: %s", err)
+	}
+	_, err := spec.GetContainerResources()
+	return err
+}
+
+func TestTooSmallDiskLimit(t *testing.T) {
+	err := checkResourcesError(t, `{"disk":"201","disk_limit":"200"}`)
+	if err == nil {
+		t.Errorf("Detection of a too small disk limit has failed")
+	}
+}
+
+func TestTooSmallDiskLimitDefaultMiSuffix(t *testing.T) {
+	err := checkResourcesError(t, `{"disk":"200","disk_limit":"200M"}`)
+	if err == nil {
+		t.Errorf("Detection of a too small disk limit has failed")
+	}
+}
+
+func TestTooSmallDiskLimitMixedSuffixes(t *testing.T) {
+	err := checkResourcesError(t, `{"disk":"2Gi","disk_limit":"2048M"}`)
+	if err == nil {
+		t.Errorf("Detection of a too small disk limit has failed")
+	}
+}
+
+func TestDiskLimitSameAsDisk(t *testing.T) {
+	err := checkResourcesError(t, `{"disk":"2Gi","disk_limit":"2048Mi"}`)
+	if err != nil {
+		t.Errorf("Detection of a too small disk limit wrongly triggered")
+	}
+}
