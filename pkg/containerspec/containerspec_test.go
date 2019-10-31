@@ -54,6 +54,34 @@ func checkDeepCopy(t *testing.T, input string) {
 		t.Errorf("Failed to unmarshal: %s", err)
 	}
 	spec2 := spec.DeepCopy()
+	if spec.CPU != nil {
+		*spec.CPU = "x"
+		if *spec2.CPU == "x" {
+			t.Errorf("Detected shallow copy of CPU")
+			return
+		}
+	}
+	if spec.Memory != nil {
+		*spec.Memory = "x"
+		if *spec2.Memory == "x" {
+			t.Errorf("Detected shallow copy of Memory")
+			return
+		}
+	}
+	if spec.Disk != nil {
+		*spec.Disk = "x"
+		if *spec2.Disk == "x" {
+			t.Errorf("Detected shallow copy of Disk")
+			return
+		}
+	}
+	if spec.DiskLimit != nil {
+		*spec.DiskLimit = "x"
+		if *spec2.DiskLimit == "x" {
+			t.Errorf("Detected shallow copy of DiskLimit")
+			return
+		}
+	}
 	out, err := json.Marshal(spec2);
 	if err != nil {
 		t.Errorf("Failed to marshal: %s", err)

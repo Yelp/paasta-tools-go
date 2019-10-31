@@ -130,6 +130,11 @@ func (in *PaastaContainerSpec) DeepCopyInto(out *PaastaContainerSpec) {
 		*out = new(KubeResourceQuantity)
 		**out = **in
 	}
+	if in.DiskLimit != nil {
+		in, out := &in.DiskLimit, &out.DiskLimit
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
 	return
 }
 
