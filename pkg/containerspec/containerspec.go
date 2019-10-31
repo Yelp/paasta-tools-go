@@ -10,9 +10,10 @@ import (
 )
 
 const (
-	defaultCPU    = KubeResourceQuantity("0.1")
-	defaultMemory = KubeResourceQuantity("512")
-	defaultDisk   = KubeResourceQuantity("1024")
+	defaultCPU          = KubeResourceQuantity("0.1")
+	defaultMemory       = KubeResourceQuantity("512")
+	defaultDisk         = KubeResourceQuantity("1024")
+	diskLimitMultiplier = 10
 )
 
 // KubeResourceQuantity : Resource quantity for Kubernetes (e.g.; CPU, mem, disk)
@@ -89,7 +90,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 	} else {
 		// Default disk limit is 10 * disk, which we have to calculate here
 		value := diskQuantity.Value()
-		value *= 10
+		value *= diskLimitMultiplier
 		diskLimit = KubeResourceQuantity(resource.NewQuantity(value, diskQuantity.Format).String())
 	}
 	diskLimitQuantity, err := resource.ParseQuantity(string(diskLimit))
