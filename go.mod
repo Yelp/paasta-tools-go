@@ -2,20 +2,19 @@ module github.com/Yelp/paasta-tools-go
 
 require (
 	github.com/fatih/structs v1.1.0
-	github.com/gogo/protobuf v1.2.1 // indirect
-	github.com/json-iterator/go v1.1.7 // indirect
-	github.com/modern-go/reflect2 v1.0.1 // indirect
+	github.com/googleapis/gnostic v0.3.1 // indirect
+	github.com/imdario/mergo v0.3.8 // indirect
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.3.0
-	github.com/subosito/gotenv v1.2.0 // indirect
-	golang.org/x/net v0.0.0-20190125091013-d26f9f9a57f3 // indirect
-	golang.org/x/text v0.3.0 // indirect
+	github.com/subosito/gotenv v1.2.0
+	golang.org/x/crypto v0.0.0-20191105034135-c7e5f84aec59 // indirect
+	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20190202010724-74b699b93c15
-	k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c
-	k8s.io/klog v0.2.0 // indirect
+	k8s.io/api v0.0.0-20191105025951-7aa4c14eac98
+	k8s.io/apimachinery v0.0.0-20191104185628-a55cb1b94bd3
+	k8s.io/client-go v0.0.0-20191016111102-bec269661e48
 	k8s.io/kubernetes v1.14.0
-	sigs.k8s.io/yaml v1.1.0 // indirect
+	k8s.io/utils v0.0.0-20191030222137-2b95a09bc58d // indirect
 )
+
+go 1.13

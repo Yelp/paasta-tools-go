@@ -39,7 +39,8 @@ func buildEnv(makefile string) error {
 	return nil
 }
 
-func KubernetesCluster(makefile string) (kubernetes.ClientSet, error) {
+// KubernetesCluster creates a kubernetes cluster using a Makefile
+func KubernetesCluster(makefile string) (*kubernetes.Clientset, error) {
 	err := buildEnv(makefile)
 	if err != nil {
 		log.Fatal(err)
@@ -66,6 +67,5 @@ func KubernetesCluster(makefile string) (kubernetes.ClientSet, error) {
 		log.Fatal(err)
 		return nil, err
 	}
-	clientset, err := kubernetes.NewForConfig(config)
-	return clientset, nil
+	return kubernetes.NewForConfig(config)
 }
