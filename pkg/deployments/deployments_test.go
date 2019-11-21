@@ -102,6 +102,31 @@ func TestMakeControlGroup(test *testing.T) {
 	}
 }
 
+
+func TestGetPaastaGitShaFromDockerURL(test *testing.T) {
+	expected := "gitabc12345"
+	actual, err := GetPaastaGitShaFromDockerURL("docker.thing/paasta-abc12345abcabcabacbacbacb")
+	if err != nil {
+		test.Errorf("Failed to GetPaastaGitShaFromDockerURL: %s", err)
+	}
+	if actual != expected {
+		test.Errorf("Expected '%+v', got '%+v'", expected, actual)
+	}
+
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
+	}
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing/abc12345abcabcabacbacbacb")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
+	}
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing/paasta-abc12")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
+	}
+}
+
 func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 	fakeDeployments := &Deployments{
 		V2: V2DeploymentsConfig{

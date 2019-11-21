@@ -17,6 +17,7 @@ package deployments
 import (
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/Yelp/paasta-tools-go/pkg/config"
 )
@@ -115,6 +116,30 @@ func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup str
 		)
 	}
 	return deployment.DockerImage, nil
+}
+
+func GetPaastaGitShaFromDockerURL(dockerUrl string) (string, error) {
+	image := strings.Split(dockerUrl, "/")
+	if len(image) != 2 {
+		return "", fmt.Errorf(
+			"Failed to extract paasta git sha from url: %s",
+			dockerUrl,
+		)
+	}
+	gitShaStrings := strings.Split(image[1], "-")
+	if len(gitShaStrings) != 2 {
+		return "", fmt.Errorf(
+			"Failed to extract paasta git sha from url: %s",
+			dockerUrl,
+		)
+	}
+	if len(gitShaStrings[1]) < 8 {
+		return "", fmt.Errorf(
+			"%s doesn't look like a git sha, not long enough",
+			gitShaStrings[1],
+		)
+	}
+	return "git" + gitShaStrings[1][:8], nil
 }
 
 // DeploymentAnnotations returns a map of annotations for the relevant service
