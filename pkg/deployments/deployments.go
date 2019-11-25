@@ -96,21 +96,15 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
 	dockerRegistry := &DockerRegistry{Registry: ""}
-	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
-	if !ok {
-		return "", fmt.Errorf("docker registry not found")
-	}
+	err := provider.PaastaConfig.Load("registry", &dockerRegistry.Registry)
 	return dockerRegistry.Registry, err
 }
 
 func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup string) (string, error) {
 	deployments := &Deployments{V2: V2DeploymentsConfig{}}
-	ok, err := provider.ServiceConfig.Load("v2", &deployments.V2)
+	err := provider.ServiceConfig.Load("v2", &deployments.V2)
 	if err != nil {
 		return "", err
-	}
-	if !ok {
-		return "", fmt.Errorf("image for deploymentGroup %v not found", deploymentGroup)
 	}
 	deployment, ok := deployments.V2.Deployments[deploymentGroup]
 
@@ -144,10 +138,7 @@ func DeploymentAnnotations(
 
 func deploymentsFromConfig(cr *configstore.Store) (*Deployments, error) {
 	deployments := &Deployments{}
-	ok, err := cr.Load("v2", deployments)
-	if !ok {
-		return nil, fmt.Errorf("deployments not found")
-	}
+	err := cr.Load("v2", deployments)
 	return deployments, err
 }
 

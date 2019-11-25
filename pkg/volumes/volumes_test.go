@@ -2,21 +2,21 @@ package volumes
 
 import (
 	"reflect"
-	"sync"
 	"testing"
 
 	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 func TestDefaultVolumesFromReader(test *testing.T) {
-	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", []map[string]interface{}{
-		map[string]interface{}{
-			"hostPath":      "/foo",
-			"containerPath": "/bar",
-			"mode":          "RO",
+	fakeVolumeConfig := map[string]interface{}{
+		"volumes": []map[string]interface{}{
+			map[string]interface{}{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
 		},
-	})
+	}
 	reader := &configstore.Store{Data: fakeVolumeConfig}
 	actual, err := DefaultVolumesFromReader(reader)
 	if err != nil {

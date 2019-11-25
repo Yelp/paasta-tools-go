@@ -2,7 +2,6 @@ package configstore
 
 import (
 	"fmt"
-	"sync"
 	"testing"
 )
 
@@ -40,21 +39,21 @@ func unexpectedfileExists(test *testing.T) func(path string) (bool, error) {
 func TestStore_loadPath(test *testing.T) {
 	key := "test key"
 	s := &Store{
-		Data: &sync.Map{},
+		Data: map[string]interface{}{},
 		ParseFile: func(file string, val interface{}) error {
-			v, ok := val.(*map[string]interface{})
+			v, ok := val.(map[string]interface{})
 			if !ok {
 				panic("assert failed")
 			}
-			(*v)[key] = file
+			v[key] = file
 			return nil
 		},
 	}
 	expected := "old value"
-	s.Data.Store(key, expected)
+	s.Data[key] = expected
 	s.loadPath("new value")
 
-	if actual, ok := s.Data.Load(key); ok {
+	if actual, ok := s.Data[key]; ok {
 		if actual != "new value" {
 			test.Fatalf("%+v was expected, got %+v", expected, actual)
 		}
@@ -66,14 +65,14 @@ func TestStore_loadPath(test *testing.T) {
 func TestStore_loadAll(test *testing.T) {
 	s := &Store{
 		Dir:  "zero",
-		Data: &sync.Map{},
+		Data: map[string]interface{}{},
 		ParseFile: func(file string, val interface{}) error {
 			fmt.Printf("parse file called: %s\n", file)
-			v, ok := val.(*map[string]interface{})
+			v, ok := val.(map[string]interface{})
 			if !ok {
 				panic("assert failed")
 			}
-			(*v)[file] = "loaded"
+			v[file] = "loaded"
 			return nil
 		},
 		ListFiles: func(dirname string) ([]string, error) {
@@ -83,7 +82,7 @@ func TestStore_loadAll(test *testing.T) {
 	s.loadAll()
 
 	for _, key := range []string{"zero/one", "zero/two"} {
-		if actual, ok := s.Data.Load(key); ok {
+		if actual, ok := s.Data[key]; ok {
 			if actual != "loaded" {
 				test.Fatalf("%s wasn't loaded correctly", key)
 			}
@@ -96,7 +95,7 @@ func TestStore_loadAll(test *testing.T) {
 func TestStore_load(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      &sync.Map{},
+		Data:      map[string]interface{}{},
 		ParseFile: func(file string, val interface{}) error { return nil },
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
@@ -118,7 +117,7 @@ func TestStore_load(test *testing.T) {
 func TestStore_Get(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      &sync.Map{},
+		Data:      map[string]interface{}{},
 		ParseFile: unexpectedParseFile(test),
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
@@ -126,22 +125,20 @@ func TestStore_Get(test *testing.T) {
 			return true, nil
 		},
 	}
-	s.Data.Store("one", "two")
-	val, ok, err := s.Get("one")
-	errorIf(test, !ok, "key not found")
-	errorIf(test, err != nil, fmt.Sprintf("err when loading: %v", err))
+	s.Data["one"] = "two"
+	val, err := s.Get("one")
+	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "two", val)
 
 	// key is missing, file with same name exists
 	s.FileExists = func(path string) (bool, error) { return true, nil }
 	s.ParseFile = func(file string, val interface{}) error {
-		v := val.(*map[string]interface{})
-		(*v)["two"] = "three"
+		v := val.(map[string]interface{})
+		v["two"] = "three"
 		return nil
 	}
-	val, ok, err = s.Get("two")
-	errorIf(test, !ok, "key not found")
-	errorIf(test, err != nil, fmt.Sprintf("err when loading: %v", err))
+	val, err = s.Get("two")
+	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "three", val)
 
 	// key is missing, file corresponding to a hint exists
@@ -152,27 +149,13 @@ func TestStore_Get(test *testing.T) {
 	}
 	s.ParseFile = func(file string, val interface{}) error {
 		errorUnexpected(test, "zero/four.json", file)
-		v := val.(*map[string]interface{})
-		(*v)["three"] = "four"
+		v := val.(map[string]interface{})
+		v["three"] = "four"
 		return nil
 	}
-	val, ok, err = s.Get("three")
-	errorIf(test, !ok, "key not found")
-	errorIf(test, err != nil, fmt.Sprintf("err when loading: %v", err))
+	val, err = s.Get("three")
+	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "four", val)
-}
-
-func TestStore_GetLoadAllWhenNoKey(test *testing.T) {
-	s := &Store{
-		Dir:       "zero",
-		Data:      &sync.Map{},
-		ParseFile: unexpectedParseFile(test),
-		ListFiles: unexpectedListFiles(test),
-		FileExists: func(path string) (bool, error) {
-			test.Fatalf("unexpected call to fileExists(%s)", path)
-			return true, nil
-		},
-	}
 
 	// key is missing, file is missing, hint is missing, loaded from all
 	listFilesCalled := false
@@ -183,36 +166,6 @@ func TestStore_GetLoadAllWhenNoKey(test *testing.T) {
 	s.FileExists = func(string) (bool, error) {
 		return false, nil
 	}
-	s.Get("four")
+	val, _ = s.Get("four")
 	errorIf(test, !listFilesCalled, "listFiles wasn't called")
-}
-
-func TestStore_GetCallsListAllWhenMatchingFileHasNoKey(test *testing.T) {
-	s := &Store{
-		Dir:       "zero",
-		Data:      &sync.Map{},
-		ParseFile: unexpectedParseFile(test),
-		ListFiles: unexpectedListFiles(test),
-		FileExists: func(path string) (bool, error) {
-			test.Fatalf("unexpected call to fileExists(%s)", path)
-			return true, nil
-		},
-	}
-
-	// file exists, but key in different file
-	listFilesCalled := false
-	s.ListFiles = func(string) ([]string, error) {
-		listFilesCalled = true
-		return []string{}, nil
-	}
-	s.FileExists = func(string) (bool, error) {
-		return true, nil
-	}
-	s.ParseFile = func(file string, val interface{}) error {
-		v := val.(*map[string]interface{})
-		(*v)["five"] = "five"
-		return nil
-	}
-	s.Get("five")
-	errorIf(test, listFilesCalled, "listFiles wasn't called")
 }

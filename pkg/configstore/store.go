@@ -1,6 +1,3 @@
-// Package configstore provides an object to fetch config data from disk
-// according to PaaSTA conventions. Loaded values are cached to avoid repeated
-// disk access. For more details, see docs for `configstore.Store`.
 package configstore
 
 import (
@@ -15,31 +12,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Store is a container that fetches and caches config values from disk and
-// destructures them into PaaSTA value structures.
-//
-// `Store` object will mimic config loading from original paasta-tools, which
-// works as following for `store.Get("foo")` call:
-//
-// 1. look on disk for file `foo.json` or `foo.yaml`
-// 2. if file exists, load it and fetch `foo` key from top-level dictionary
-// 3. if file is missing, load all `.json` or `.yaml` files and merge them
-//    into single dictionary and look for `foo` key in there
-//
-// To avoid eagerly loading all existing configuration files, `Store` object
-// accepts optional `hints` dictionary, with mapping from keys to file paths,
-// where to look for those keys. If requested key is missing from hints, it will
-// trigger eager loading as per default functionality.
-//
-// There are two ways to get config data, via `Get` or `Load` methods. `Get`
-// will parse the config value and return it as `interface{}` type, while `Load`
-// will accept destination pointer and use `mapstructure.Decode` to destructure
-// the value.
-//
-// TODO: since `Store` is meant to be a long-lived object we need to keep track
-//       of updated configs and a possibility to manually reset the cache.
+// Store holds config data
 type Store struct {
-	Data  *sync.Map
+	// If you care about sanity, never write here, just read
+	Data  map[string]interface{}
 	Dir   string
 	Hints map[string]string
 	sync.Mutex
@@ -52,7 +28,7 @@ type Store struct {
 func listFiles(dirname string) ([]string, error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to list directory %v: %v", dirname, err)
+		return nil, err
 	}
 
 	ret := make([]string, len(files))
@@ -67,7 +43,7 @@ func parseFile(path string, value interface{}) error {
 	reader, err := os.Open(path)
 	defer reader.Close()
 	if err != nil {
-		return fmt.Errorf("Failed to open %s: %v", path, err)
+		return err
 	}
 
 	return json.NewDecoder(reader).Decode(value)
@@ -93,7 +69,6 @@ func NewStore(dir string, hints map[string]string) *Store {
 		hints = map[string]string{}
 	}
 	return &Store{
-		Data:       &sync.Map{},
 		Dir:        dir,
 		Hints:      hints,
 		ListFiles:  listFiles,
@@ -106,15 +81,15 @@ func NewStore(dir string, hints map[string]string) *Store {
 // into s.Data, unlock the mutex
 func (s *Store) loadPath(path string) error {
 	value := map[string]interface{}{}
-	err := s.ParseFile(path, &value)
+	err := s.ParseFile(path, value)
 	if err != nil {
-		return fmt.Errorf("Failed to parse %s: %v", path, err)
+		return err
 	}
 
 	s.Lock()
 	defer s.Unlock()
 	for key, val := range value {
-		s.Data.Store(key, val)
+		s.Data[key] = val
 	}
 
 	return nil
@@ -124,90 +99,68 @@ func (s *Store) loadPath(path string) error {
 func (s *Store) loadAll() error {
 	files, err := s.ListFiles(s.Dir)
 	if err != nil {
-		return fmt.Errorf("Failed to list %s: %v", s.Dir, err)
+		return err
 	}
 
 	for _, file := range files {
-		filepath := path.Join(s.Dir, file)
-		err := s.loadPath(filepath)
+		err := s.loadPath(path.Join(s.Dir, file))
 		if err != nil {
-			return fmt.Errorf("Failed to load %s: %v", filepath, err)
+			return err
 		}
 	}
 	return nil
 }
-
-var extensions = []string{"json", "yaml"}
 
 // Look for `file`.json or `file`.yaml, if not found try loading all files and
 // print a warning about hints
 func (s *Store) load(file string) error {
+	extensions := []string{"json", "yaml"}
 	for _, ext := range extensions {
 		path := path.Join(s.Dir, fmt.Sprintf("%s.%s", file, ext))
 		exists, err := s.FileExists(path)
 		if err != nil {
-			return fmt.Errorf("Failed to find %s: %v", path, err)
+			return err
 		}
 		if exists {
-			err = s.loadPath(path)
-			if err != nil {
-				return fmt.Errorf("Failed to load %s: %v", path, err)
-			}
-			return nil
+			return s.loadPath(path)
 		}
 	}
 
-	return nil
+	log.Printf(
+		"WARN: loading all configs, consider adding some hints" +
+			fmt.Sprintf("for %s in %s", file, s.Dir),
+	)
+	return s.loadAll()
 }
 
 // Get returns value for given `key`. If not found in `s.data`, call
 // `s.load` function with `file` from `s.hints` or `key` itself.
-func (s *Store) Get(key string) (interface{}, bool, error) {
-	if val, ok := s.Data.Load(key); ok {
-		return val, ok, nil
+func (s *Store) Get(key string) (interface{}, error) {
+	if val, ok := s.Data[key]; ok {
+		return val, nil
 	}
 
 	var file string
-	var fromHint bool
 	if val, ok := s.Hints[key]; ok {
 		file = val
-		fromHint = true
 	} else {
 		file = key
-		fromHint = false
 	}
-	err := s.load(file)
-	if err != nil {
-		return nil, false, fmt.Errorf("Failed to load %v: %v", file, err)
-	}
+	s.load(file)
 
-	val, ok := s.Data.Load(key)
+	val, ok := s.Data[key]
 	if !ok {
-		if !fromHint {
-			log.Printf(
-				"WARN: loading all configs, consider adding some hints in %s",
-				path.Join(s.Dir, file),
-			)
-			err := s.loadAll()
-			if err != nil {
-				return nil, false, fmt.Errorf("failed to load all configs: %v", err)
-			}
-			val, ok = s.Data.Load(key)
-		}
+		return nil, fmt.Errorf("key not found: %s", key)
 	}
-
-	return val, ok, nil
+	return val, nil
 }
 
 // Load uses mapstructure.Decode to parse result of a Get into provided
 // destination value
-func (s *Store) Load(key string, dst interface{}) (bool, error) {
-	val, ok, err := s.Get(key)
+func (s *Store) Load(key string, dst interface{}) error {
+	val, err := s.Get(key)
 	if err != nil {
-		return false, fmt.Errorf("Failed to get %s: %v", key, err)
+		return err
 	}
-	if !ok {
-		return false, nil
-	}
-	return true, mapstructure.Decode(val, dst)
+	return mapstructure.Decode(val, dst)
 }
