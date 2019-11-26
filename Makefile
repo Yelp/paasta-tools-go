@@ -17,6 +17,7 @@ build:
 
 clean:
 	rm -rf bin
+	rm -rf dist/*
 
 cmd: cmd/*
 
@@ -26,7 +27,7 @@ $(CMDS):
 
 docker_build_%:
 	@echo "Building build docker image for $*"
-	[ -d dist ] || mkdir -p dist
+	[ -d dist/$* ] || mkdir -p dist/$*
 	cd ./yelp_package/$* && docker build --build-arg GO_VERSION=$(GO_VERSION) -t paasta-deb-builder-$* .
 
 deb_%: clean docker_build_%
@@ -36,6 +37,7 @@ deb_%: clean docker_build_%
 			--deb-dist $* --deb-priority optional \
 			--name paasta-tools-go --package dist \
 			--description "CLI tools for PaaSTA in Go" \
+			--package dist/$* \
 			bin=/usr/ && \
 		chown -R $(UID):$(GID) bin dist \
 	'
