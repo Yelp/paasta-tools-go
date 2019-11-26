@@ -1,0 +1,8 @@
+---
+# See http://y/jenkinsfile for more information
+# about customizing your Jenkins pipeline.
+type: debian
+host_type: xenial
+overrides:
+  debian:
+    platforms: [xenial]
