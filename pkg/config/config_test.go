@@ -15,6 +15,27 @@ func errorUnexpected(test *testing.T, expected, actual interface{}) {
 	errorIf(test, expected != actual, "expected %+v, actual %+v", expected, actual)
 }
 
+func unexpectedParseFile(test *testing.T) func(string, interface{}) error {
+	return func(file string, val interface{}) error {
+		test.Fatalf("unexpected call to parseFile(%s, _)", file)
+		return nil
+	}
+}
+
+func unexpectedListFiles(test *testing.T) func(string) ([]string, error) {
+	return func(dirname string) ([]string, error) {
+		test.Fatalf("unexpected call to listFiles(%s)", dirname)
+		return []string{}, nil
+	}
+}
+
+func unexpectedfileExists(test *testing.T) func(path string) (bool, error) {
+	return func(path string) (bool, error) {
+		test.Fatalf("unexpected call to fileExists(%s)", path)
+		return false, nil
+	}
+}
+
 func TestStore_loadPath(test *testing.T) {
 	key := "test key"
 	s := &Store{
@@ -55,7 +76,6 @@ func TestStore_loadAll(test *testing.T) {
 			return nil
 		},
 		listFiles: func(dirname string) ([]string, error) {
-			fmt.Println("list files called")
 			return []string{"one", "two"}, nil
 		},
 	}
@@ -74,15 +94,10 @@ func TestStore_loadAll(test *testing.T) {
 
 func TestStore_load(test *testing.T) {
 	s := &Store{
-		dir:  "zero",
-		data: map[string]interface{}{},
-		parseFile: func(file string, val interface{}) error {
-			return nil
-		},
-		listFiles: func(dirname string) ([]string, error) {
-			test.Fatalf("unexpected call to listFiles(%s)", dirname)
-			return []string{}, nil
-		},
+		dir:       "zero",
+		data:      map[string]interface{}{},
+		parseFile: func(file string, val interface{}) error { return nil },
+		listFiles: unexpectedListFiles(test),
 		fileExists: func(path string) (bool, error) {
 			expected := "zero/one.json"
 			if path != expected {
@@ -93,31 +108,18 @@ func TestStore_load(test *testing.T) {
 	}
 	s.load("one")
 
-	s.fileExists = func(path string) (bool, error) {
-		return false, nil
-	}
-	s.parseFile = func(file string, val interface{}) error {
-		test.Fatalf("unexpected call to parseFile(%s)", file)
-		return nil
-	}
-	s.listFiles = func(dirname string) ([]string, error) {
-		return []string{}, nil
-	}
+	s.fileExists = func(path string) (bool, error) { return false, nil }
+	s.parseFile = unexpectedParseFile(test)
+	s.listFiles = func(dirname string) ([]string, error) { return []string{}, nil }
 	s.load("one")
 }
 
 func TestStore_Get(test *testing.T) {
 	s := &Store{
-		dir:  "zero",
-		data: map[string]interface{}{},
-		parseFile: func(file string, val interface{}) error {
-			test.Fatalf("unexpected call to parseFile(%s)", file)
-			return nil
-		},
-		listFiles: func(dirname string) ([]string, error) {
-			test.Fatalf("unexpected call to listFiles(%s)", dirname)
-			return []string{}, nil
-		},
+		dir:       "zero",
+		data:      map[string]interface{}{},
+		parseFile: unexpectedParseFile(test),
+		listFiles: unexpectedListFiles(test),
 		fileExists: func(path string) (bool, error) {
 			test.Fatalf("unexpected call to fileExists(%s)", path)
 			return true, nil
@@ -156,11 +158,14 @@ func TestStore_Get(test *testing.T) {
 	errorUnexpected(test, "four", val)
 
 	// key is missing, file is missing, hint is missing, loaded from all
+	listFilesCalled := false
+	s.listFiles = func(string) ([]string, error) {
+		listFilesCalled = true
+		return []string{}, nil
+	}
+	s.fileExists = func(string) (bool, error) {
+		return false, nil
+	}
 	val, ok = s.Get("four")
-	errorIf(test, !ok, "key not found")
-	errorUnexpected(test, "five", val)
-
-	// hint is wrong
-
-	// missing from everywhere
+	errorIf(test, !listFilesCalled, "listFiles wasn't called")
 }
