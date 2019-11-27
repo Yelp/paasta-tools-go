@@ -2,10 +2,9 @@ package volumes
 
 import (
 	"reflect"
-	"sync"
 	"testing"
 
-	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	"github.com/Yelp/paasta-tools-go/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -73,15 +72,16 @@ func TestFormatMountName(t *testing.T) {
 }
 
 func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
-	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", []map[string]interface{}{
-		map[string]interface{}{
-			"hostPath":      "/foo",
-			"containerPath": "/bar",
-			"mode":          "RO",
+	fakeVolumeConfig := map[string]interface{}{
+		"volumes": []map[string]interface{}{
+			map[string]interface{}{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
 		},
-	})
-	reader := &configstore.Store{Data: fakeVolumeConfig}
+	}
+	reader := &config.Store{Data: fakeVolumeConfig}
 	volumeMounts, volumes, err := GetDefaultPaastaKubernetesVolumes(reader)
 	if err != nil {
 		t.Errorf("Error %s", err)
