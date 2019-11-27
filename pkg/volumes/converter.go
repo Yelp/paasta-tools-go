@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	"github.com/Yelp/paasta-tools-go/pkg/config"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -50,7 +50,7 @@ func formatMountName(hostPath string) string {
 }
 
 // GetDefaultPaastaKubernetesVolumes ...
-func GetDefaultPaastaKubernetesVolumes(configStore *configstore.Store) ([]corev1.VolumeMount, []corev1.Volume, error) {
+func GetDefaultPaastaKubernetesVolumes(configStore *config.Store) ([]corev1.VolumeMount, []corev1.Volume, error) {
 	pvolumes, err := DefaultVolumesFromReader(configStore)
 	if err != nil {
 		err = fmt.Errorf("Error finding default volumes: %s", err)

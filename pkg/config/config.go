@@ -8,19 +8,21 @@ import (
 	"os"
 	"path"
 	"sync"
+
+	"github.com/mitchellh/mapstructure"
 )
 
 // Store holds config data
 type Store struct {
 	// If you care about sanity, never write here, just read
-	data  map[string]interface{}
-	dir   string
-	hints map[string]string
+	Data  map[string]interface{}
+	Dir   string
+	Hints map[string]string
 	sync.Mutex
 
-	listFiles  func(string) ([]string, error)
-	parseFile  func(string, interface{}) error
-	fileExists func(string) (bool, error)
+	ListFiles  func(string) ([]string, error)
+	ParseFile  func(string, interface{}) error
+	FileExists func(string) (bool, error)
 }
 
 func listFiles(dirname string) ([]string, error) {
@@ -67,11 +69,11 @@ func NewStore(dir string, hints map[string]string) *Store {
 		hints = map[string]string{}
 	}
 	return &Store{
-		dir:        dir,
-		hints:      hints,
-		listFiles:  listFiles,
-		parseFile:  parseFile,
-		fileExists: fileExists,
+		Dir:        dir,
+		Hints:      hints,
+		ListFiles:  listFiles,
+		ParseFile:  parseFile,
+		FileExists: fileExists,
 	}
 }
 
@@ -79,7 +81,7 @@ func NewStore(dir string, hints map[string]string) *Store {
 // a new map, merge loaded data into the copy and swap `s.data`
 func (s *Store) loadPath(path string) error {
 	value := map[string]interface{}{}
-	err := s.parseFile(path, value)
+	err := s.ParseFile(path, value)
 	if err != nil {
 		return err
 	}
@@ -87,7 +89,7 @@ func (s *Store) loadPath(path string) error {
 	s.Lock()
 	defer s.Unlock()
 	for key, val := range value {
-		s.data[key] = val
+		s.Data[key] = val
 	}
 
 	return nil
@@ -95,13 +97,13 @@ func (s *Store) loadPath(path string) error {
 
 // Walk `s.dir` and `s.loadPath` all the files
 func (s *Store) loadAll() error {
-	files, err := s.listFiles(s.dir)
+	files, err := s.ListFiles(s.Dir)
 	if err != nil {
 		return err
 	}
 
 	for _, file := range files {
-		err := s.loadPath(path.Join(s.dir, file))
+		err := s.loadPath(path.Join(s.Dir, file))
 		if err != nil {
 			return err
 		}
@@ -112,15 +114,15 @@ func (s *Store) loadAll() error {
 // Look for `domain`.json file, if not found try loading all files and
 // print a warning about hints
 func (s *Store) load(domain string) error {
-	path := path.Join(s.dir, fmt.Sprintf("%s.json", domain))
-	exists, err := s.fileExists(path)
+	path := path.Join(s.Dir, fmt.Sprintf("%s.json", domain))
+	exists, err := s.FileExists(path)
 	if err != nil {
 		return err
 	}
 	if !exists {
 		log.Printf(
 			"WARN: loading all configs, consider adding some hints" +
-				fmt.Sprintf("for %s in %s", domain, s.dir),
+				fmt.Sprintf("for %s in %s", domain, s.Dir),
 		)
 		return s.loadAll()
 	}
@@ -129,19 +131,33 @@ func (s *Store) load(domain string) error {
 
 // Get returns value for given `key`. If not found in `s.data`, call
 // `s.load` function with `domain` from `s.hints` or `key` itself.
-func (s *Store) Get(key string) (interface{}, bool) {
-	if val, ok := s.data[key]; ok {
-		return val, ok
+func (s *Store) Get(key string) (interface{}, error) {
+	if val, ok := s.Data[key]; ok {
+		return val, nil
 	}
 
 	var domain string
-	if dom, ok := s.hints[key]; ok {
+	if dom, ok := s.Hints[key]; ok {
 		domain = dom
 	} else {
 		domain = key
 	}
 	s.load(domain)
 
-	val, ok := s.data[key]
-	return val, ok
+	val, ok := s.Data[key]
+	if !ok {
+		return nil, fmt.Errorf("key not found: %s", key)
+	}
+	return val, nil
+}
+
+// Load uses mapstructure.Decode to parse result of a Get into provided
+// destination value
+func (s *Store) Load(key string, dst interface{}) error {
+	val, err := s.Get(key)
+	if err != nil {
+		return err
+	}
+	mapstructure.Decode(val, dst)
+	return nil
 }
