@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/config_store"
 )
 
 // V2DeploymentGroup ...
@@ -55,17 +55,17 @@ type ImageProvider interface {
 
 type DefaultImageProvider struct {
 	Service       string
-	ServiceConfig *config.Store
-	PaastaConfig  *config.Store
+	ServiceConfig *config_store.Store
+	PaastaConfig  *config_store.Store
 }
 
 // NewDefaultImageProviderForService ...
 func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
-	serviceConfig := config.NewStore(
+	serviceConfig := config_store.NewStore(
 		path.Join("/nail/etc/services", service),
 		map[string]string{"v2": "deployments"},
 	)
-	paastaConfig := config.NewStore(
+	paastaConfig := config_store.NewStore(
 		"/etc/paasta",
 		map[string]string{"registry": "docker_registry"},
 	)
@@ -122,7 +122,7 @@ func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup str
 func DeploymentAnnotations(
 	service, cluster, instance, deploymentGroup string,
 ) (map[string]string, error) {
-	configStore := config.NewStore(
+	configStore := config_store.NewStore(
 		fmt.Sprintf("/nail/etc/services/%s", service),
 		map[string]string{"v2": "deployments"},
 	)
@@ -136,7 +136,7 @@ func DeploymentAnnotations(
 	return deploymentAnnotationsForControlGroup(deployments, controlGroup)
 }
 
-func deploymentsFromConfig(cr *config.Store) (*Deployments, error) {
+func deploymentsFromConfig(cr *config_store.Store) (*Deployments, error) {
 	deployments := &Deployments{}
 	err := cr.Load("v2", deployments)
 	return deployments, err

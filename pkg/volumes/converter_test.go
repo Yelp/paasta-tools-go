@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/config_store"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -81,7 +81,7 @@ func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
 			},
 		},
 	}
-	reader := &config.Store{Data: fakeVolumeConfig}
+	reader := &config_store.Store{Data: fakeVolumeConfig}
 	volumeMounts, volumes, err := GetDefaultPaastaKubernetesVolumes(reader)
 	if err != nil {
 		t.Errorf("Error %s", err)
