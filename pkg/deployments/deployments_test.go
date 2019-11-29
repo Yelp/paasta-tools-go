@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/config_store"
 )
 
 const (
@@ -13,14 +13,14 @@ const (
 
 func TestDefaultProviderGetDeployment(test *testing.T) {
 	imageProvider := DefaultImageProvider{
-		PaastaConfig: &config.Store{
+		PaastaConfig: &config_store.Store{
 			Data: map[string]interface{}{
 				"docker_registry": map[string]interface{}{
 					"registry": "fakeregistry.yelp.com",
 				},
 			},
 		},
-		ServiceConfig: &config.Store{
+		ServiceConfig: &config_store.Store{
 			Data: map[string]interface{}{
 				"v2": map[string]interface{}{
 					"deployments": map[string]interface{}{
@@ -107,12 +107,12 @@ func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 
 func TestDefaultGetRegistry(t *testing.T) {
 	imageProvider := DefaultImageProvider{
-		PaastaConfig: &config.Store{
+		PaastaConfig: &config_store.Store{
 			Data: map[string]interface{}{
 				"registry": "fakeregistry.yelp.com",
 			},
 		},
-		ServiceConfig: &config.Store{
+		ServiceConfig: &config_store.Store{
 			Data: map[string]interface{}{
 				"v2": map[string]interface{}{
 					"deployments": map[string]interface{}{},

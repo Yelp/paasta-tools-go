@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/config_store"
 )
 
 func TestDefaultVolumesFromReader(test *testing.T) {
@@ -17,7 +17,7 @@ func TestDefaultVolumesFromReader(test *testing.T) {
 			},
 		},
 	}
-	reader := &config.Store{Data: fakeVolumeConfig}
+	reader := &config_store.Store{Data: fakeVolumeConfig}
 	actual, err := DefaultVolumesFromReader(reader)
 	if err != nil {
 		test.Errorf("failed to read config")
