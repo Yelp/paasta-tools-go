@@ -8,7 +8,8 @@ package client
 import (
 	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
+
+	strfmt "github.com/go-openapi/strfmt"
 
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/autoscaler"
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/marathon_dashboard"
@@ -59,11 +60,17 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *Paasta {
 
 	cli := new(Paasta)
 	cli.Transport = transport
+
 	cli.Autoscaler = autoscaler.New(transport, formats)
+
 	cli.MarathonDashboard = marathon_dashboard.New(transport, formats)
+
 	cli.Operations = operations.New(transport, formats)
+
 	cli.Resources = resources.New(transport, formats)
+
 	cli.Service = service.New(transport, formats)
+
 	return cli
 }
 
@@ -108,15 +115,15 @@ func (cfg *TransportConfig) WithSchemes(schemes []string) *TransportConfig {
 
 // Paasta is a client for paasta
 type Paasta struct {
-	Autoscaler autoscaler.ClientService
+	Autoscaler *autoscaler.Client
 
-	MarathonDashboard marathon_dashboard.ClientService
+	MarathonDashboard *marathon_dashboard.Client
 
-	Operations operations.ClientService
+	Operations *operations.Client
 
-	Resources resources.ClientService
+	Resources *resources.Client
 
-	Service service.ClientService
+	Service *service.Client
 
 	Transport runtime.ClientTransport
 }
@@ -124,9 +131,15 @@ type Paasta struct {
 // SetTransport changes the transport on the client and all its subresources
 func (c *Paasta) SetTransport(transport runtime.ClientTransport) {
 	c.Transport = transport
+
 	c.Autoscaler.SetTransport(transport)
+
 	c.MarathonDashboard.SetTransport(transport)
+
 	c.Operations.SetTransport(transport)
+
 	c.Resources.SetTransport(transport)
+
 	c.Service.SetTransport(transport)
+
 }

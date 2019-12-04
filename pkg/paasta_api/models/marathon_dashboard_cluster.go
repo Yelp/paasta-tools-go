@@ -8,13 +8,13 @@ package models
 import (
 	"strconv"
 
+	strfmt "github.com/go-openapi/strfmt"
+
 	"github.com/go-openapi/errors"
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
 
 // MarathonDashboardCluster List of all the MarathonDashboardItems for a cluster
-//
 // swagger:model MarathonDashboardCluster
 type MarathonDashboardCluster []*MarathonDashboardItem
 

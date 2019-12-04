@@ -9,11 +9,12 @@ import (
 	"fmt"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
+
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // New creates a new operations API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ClientTransport, formats strfmt.Registry) *Client {
 	return &Client{transport: transport, formats: formats}
 }
 
@@ -25,25 +26,8 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
-// ClientService is the interface for Client methods
-type ClientService interface {
-	DeleteServiceAutoscalerPause(params *DeleteServiceAutoscalerPauseParams) (*DeleteServiceAutoscalerPauseOK, error)
-
-	DeployQueue(params *DeployQueueParams) (*DeployQueueOK, error)
-
-	GetServiceAutoscalerPause(params *GetServiceAutoscalerPauseParams) (*GetServiceAutoscalerPauseOK, error)
-
-	Metastatus(params *MetastatusParams) (*MetastatusOK, error)
-
-	ShowVersion(params *ShowVersionParams) (*ShowVersionOK, error)
-
-	UpdateServiceAutoscalerPause(params *UpdateServiceAutoscalerPauseParams) (*UpdateServiceAutoscalerPauseOK, error)
-
-	SetTransport(transport runtime.ClientTransport)
-}
-
 /*
-  DeleteServiceAutoscalerPause unpauses the autoscaler
+DeleteServiceAutoscalerPause unpauses the autoscaler
 */
 func (a *Client) DeleteServiceAutoscalerPause(params *DeleteServiceAutoscalerPauseParams) (*DeleteServiceAutoscalerPauseOK, error) {
 	// TODO: Validate the params before sending
@@ -77,41 +61,7 @@ func (a *Client) DeleteServiceAutoscalerPause(params *DeleteServiceAutoscalerPau
 }
 
 /*
-  DeployQueue gets deploy queue contents
-*/
-func (a *Client) DeployQueue(params *DeployQueueParams) (*DeployQueueOK, error) {
-	// TODO: Validate the params before sending
-	if params == nil {
-		params = NewDeployQueueParams()
-	}
-
-	result, err := a.transport.Submit(&runtime.ClientOperation{
-		ID:                 "deploy_queue",
-		Method:             "GET",
-		PathPattern:        "/deploy_queue",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"application/x-www-form-urlencoded"},
-		Schemes:            []string{"http"},
-		Params:             params,
-		Reader:             &DeployQueueReader{formats: a.formats},
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	})
-	if err != nil {
-		return nil, err
-	}
-	success, ok := result.(*DeployQueueOK)
-	if ok {
-		return success, nil
-	}
-	// unexpected success response
-	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
-	msg := fmt.Sprintf("unexpected success response for deploy_queue: API contract not enforced by server. Client expected to get an error, but got: %T", result)
-	panic(msg)
-}
-
-/*
-  GetServiceAutoscalerPause gets autoscaling pause time
+GetServiceAutoscalerPause gets autoscaling pause time
 */
 func (a *Client) GetServiceAutoscalerPause(params *GetServiceAutoscalerPauseParams) (*GetServiceAutoscalerPauseOK, error) {
 	// TODO: Validate the params before sending
@@ -145,7 +95,7 @@ func (a *Client) GetServiceAutoscalerPause(params *GetServiceAutoscalerPausePara
 }
 
 /*
-  Metastatus gets metastatus
+Metastatus gets metastatus
 */
 func (a *Client) Metastatus(params *MetastatusParams) (*MetastatusOK, error) {
 	// TODO: Validate the params before sending
@@ -179,7 +129,7 @@ func (a *Client) Metastatus(params *MetastatusParams) (*MetastatusOK, error) {
 }
 
 /*
-  ShowVersion versions of paasta tools package
+ShowVersion versions of paasta tools package
 */
 func (a *Client) ShowVersion(params *ShowVersionParams) (*ShowVersionOK, error) {
 	// TODO: Validate the params before sending
@@ -213,7 +163,7 @@ func (a *Client) ShowVersion(params *ShowVersionParams) (*ShowVersionOK, error) 
 }
 
 /*
-  UpdateServiceAutoscalerPause update service autoscaler pause API
+UpdateServiceAutoscalerPause update service autoscaler pause API
 */
 func (a *Client) UpdateServiceAutoscalerPause(params *UpdateServiceAutoscalerPauseParams) (*UpdateServiceAutoscalerPauseOK, error) {
 	// TODO: Validate the params before sending

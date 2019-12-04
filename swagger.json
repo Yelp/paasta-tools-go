@@ -65,20 +65,6 @@
                 "operationId": "metastatus"
             }
         },
-        "/deploy_queue": {
-            "get": {
-                "responses": {
-                    "200": {
-                        "description": "Contents of deploy queue",
-                        "schema": {
-                            "$ref": "#/definitions/DeployQueue"
-                        }
-                    }
-                },
-                "summary": "Get deploy queue contents",
-                "operationId": "deploy_queue"
-            }
-        },
         "/service_autoscaler/pause": {
             "get": {
                 "responses": {
@@ -208,7 +194,9 @@
                                     "type": "array",
                                     "items": {
                                         "type": "array",
-                                        "items": {}
+                                        "items": {
+                                            "type": "object"
+                                        }
                                     }
                                 }
                             }
@@ -347,13 +335,6 @@
                         "in": "query",
                         "description": "Include Smartstack information",
                         "name": "include_smartstack",
-                        "required": false,
-                        "type": "boolean"
-                    },
-                    {
-                        "in": "query",
-                        "description": "Include Envoy information",
-                        "name": "include_envoy",
                         "required": false,
                         "type": "boolean"
                     },
@@ -670,18 +651,6 @@
                         }
                     },
                     "description": "Nullable Flink instance status and metadata"
-                },
-                "kafkacluster": {
-                    "type": "object",
-                    "properties": {
-                        "status": {
-                            "$ref": "#/definitions/InstanceStatusKafkaCluster"
-                        },
-                        "metadata": {
-                            "$ref": "#/definitions/InstanceMetadataKafkaCluster"
-                        }
-                    },
-                    "description": "Nullable KafkaCluster instance status and metadata"
                 }
             }
         },
@@ -764,10 +733,6 @@
                 "smartstack": {
                     "$ref": "#/definitions/SmartstackStatus",
                     "description": "Status of the service in smartstack"
-                },
-                "envoy": {
-                    "$ref": "#/definitions/EnvoyStatus",
-                    "description": "Status of the service in Envoy"
                 },
                 "error_message": {
                     "type": "string",
@@ -1093,83 +1058,6 @@
                 }
             }
         },
-        "EnvoyStatus": {
-            "type": "object",
-            "properties": {
-                "registration": {
-                    "type": "string",
-                    "description": "Registration name of the service in Smartstack"
-                },
-                "expected_backends_per_location": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Number of backends expected to be present in each location"
-                },
-                "locations": {
-                    "type": "array",
-                    "description": "Locations the service is deployed",
-                    "items": {
-                        "$ref": "#/definitions/EnvoyLocation"
-                    }
-                }
-            }
-        },
-        "EnvoyLocation": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Name of the location"
-                },
-                "running_backends_count": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Number of running backends for the service in this location"
-                },
-                "backends": {
-                    "type": "array",
-                    "description": "Envoy backends running in this location",
-                    "items": {
-                        "$ref": "#/definitions/EnvoyBackend"
-                    }
-                },
-                "is_proxied_through_casper": {
-                    "type": "boolean",
-                    "description": "Whether this backend is proxied through Casper"
-                }
-            }
-        },
-        "EnvoyBackend": {
-            "type": "object",
-            "properties": {
-                "address": {
-                    "type": "string",
-                    "description": "Address of the host on which the backend is running"
-                },
-                "port_value": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Port number on which the backend responds"
-                },
-                "hostname": {
-                    "type": "string",
-                    "description": "Name of the host on which the backend is running"
-                },
-                "eds_health_status": {
-                    "type": "string",
-                    "description": "Status of the backend in Envoy as reported by the EDS"
-                },
-                "weight": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "The weight of this backend in the cluster"
-                },
-                "has_associated_task": {
-                    "type": "boolean",
-                    "description": "Whether this backend has an associated task running"
-                }
-            }
-        },
         "InstanceStatusKubernetes": {
             "type": "object",
             "properties": {
@@ -1211,10 +1099,6 @@
                         "Waiting",
                         "NotRunning"
                     ]
-                },
-                "deploy_status_message": {
-                    "type": "string",
-                    "description": "Reason for the deploy status"
                 },
                 "backoff_seconds": {
                     "type": "integer",
@@ -1258,35 +1142,6 @@
                         "$ref": "#/definitions/KubernetesPod"
                     }
                 },
-                "autoscaling_status": {
-                    "type": "object",
-                    "description": "HPA associated to this app",
-                    "properties": {
-                        "min_instances": {
-                            "type": "integer",
-                            "description": "min_instances as specified in yelpsoa_configs"
-                        },
-                        "max_instances": {
-                            "type": "integer",
-                            "description": "min_instances as specified in yelpsoa_configs"
-                        },
-                        "desired_replicas": {
-                            "type": "integer",
-                            "description": "desired number of _instances as calculated by HPA"
-                        },
-                        "last_scale_time": {
-                            "type": "string",
-                            "description": "timestamp of last autoscale"
-                        },
-                        "metrics": {
-                            "type": "array",
-                            "description": "Current metrics",
-                            "items": {
-                                "$ref": "#/definitions/HPAMetric"
-                            }
-                        }
-                    }
-                },
                 "error_message": {
                     "type": "string",
                     "description": "Error message when a kubernetes object (Deployment/Statefulset) cannot be found"
@@ -1297,23 +1152,6 @@
                 "app_count",
                 "bounce_method"
             ]
-        },
-        "HPAMetric": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "name of the metric"
-                },
-                "target_value": {
-                    "type": "string",
-                    "description": "setpoint/target_value as specified in yelpsoa_configs"
-                },
-                "current_value": {
-                    "type": "string",
-                    "description": "setpoint/target_value as specified in yelpsoa_configs"
-                }
-            }
         },
         "KubernetesReplicaSet": {
             "type": "object",
@@ -1346,10 +1184,6 @@
                     "type": "string",
                     "description": "name of the pod in Kubernetes"
                 },
-                "host": {
-                    "type": "string",
-                    "description": "name of the pod's host"
-                },
                 "deployed_timestamp": {
                     "type": "number",
                     "format": "float",
@@ -1359,39 +1193,9 @@
                     "type": "string",
                     "description": "The status of the pod"
                 },
-                "ready": {
-                    "type": "boolean",
-                    "description": "Whether or not the pod is ready (i.e. all containers up)"
-                },
-                "containers": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/KubernetesContainer",
-                        "description": "List of containers in the pod"
-                    }
-                },
-                "reason": {
-                    "type": "string",
-                    "x-nullable": true,
-                    "description": "short message explaining the pod's state"
-                },
-                "message": {
-                    "type": "string",
-                    "x-nullable": true,
-                    "description": "long message explaining the pod's state"
-                }
-            }
-        },
-        "KubernetesContainer": {
-            "type": "object",
-            "properties": {
-                "name": {
-                    "type": "string",
-                    "description": "Name of the container"
-                },
                 "tail_lines": {
                     "$ref": "#/definitions/TaskTailLines",
-                    "description": "Stdout and stderr tail of the container"
+                    "description": "Stdout and stderr tail of the task"
                 }
             }
         },
@@ -1455,18 +1259,6 @@
         "InstanceMetadataFlink": {
             "type": "object",
             "description": "Flink instance metadata"
-        },
-        "InstanceStatusKafkaCluster": {
-            "type": "object",
-            "description": "Kafka instance status"
-        },
-        "InstanceMetadataKafkaCluster": {
-            "type": "object",
-            "description": "Kafka instance metadata"
-        },
-        "InstanceSpecKafkaCluster": {
-            "type": "object",
-            "description": "Kafka instance spec"
         },
         "InstanceTasks": {
             "type": "array",
@@ -1546,74 +1338,6 @@
                 "exit_code": {
                     "type": "integer",
                     "description": "Exit code from `paasta metastatus` command"
-                }
-            }
-        },
-        "DeployQueue": {
-            "type": "object",
-            "description": "Current state of the deployd queue",
-            "properties": {
-                "available_service_instances": {
-                    "type": "array",
-                    "description": "Service instances that are ready to be acted on by deployd",
-                    "items": {
-                        "$ref": "#/definitions/DeployQueueServiceInstance"
-                    }
-                },
-                "unavailable_service_instances": {
-                    "type": "array",
-                    "description": "Service instances that deployd is waiting to act on",
-                    "items": {
-                        "$ref": "#/definitions/DeployQueueServiceInstance"
-                    }
-                }
-            }
-        },
-        "DeployQueueServiceInstance": {
-            "type": "object",
-            "description": "An instance of a service in the deploy queue",
-            "properties": {
-                "service": {
-                    "type": "string",
-                    "description": "Name of the service"
-                },
-                "instance": {
-                    "type": "string",
-                    "description": "Name of the instance of the service"
-                },
-                "bounce_by": {
-                    "type": "number",
-                    "format": "float",
-                    "description": "Desired timestamp by which the service instance should be bounced"
-                },
-                "wait_until": {
-                    "type": "number",
-                    "format": "float",
-                    "description": "Timestamp before which no action should be taken on this service instance"
-                },
-                "enqueue_time": {
-                    "type": "number",
-                    "format": "float",
-                    "description": "Timestamp at which the service instance was last added to the queue"
-                },
-                "bounce_start_time": {
-                    "type": "number",
-                    "format": "float",
-                    "description": "Timestamp at which service instance was first added to the queue"
-                },
-                "watcher": {
-                    "type": "string",
-                    "description": "The process that enqueued the task"
-                },
-                "failures": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Number of times deployment actions have failed on this service instance"
-                },
-                "processed_count": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Number of times any deployment action has been taken on this service instance"
                 }
             }
         },

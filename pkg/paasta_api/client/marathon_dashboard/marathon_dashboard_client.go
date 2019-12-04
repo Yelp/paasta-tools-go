@@ -9,11 +9,12 @@ import (
 	"fmt"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
+
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // New creates a new marathon dashboard API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
+func New(transport runtime.ClientTransport, formats strfmt.Registry) *Client {
 	return &Client{transport: transport, formats: formats}
 }
 
@@ -25,15 +26,8 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
-// ClientService is the interface for Client methods
-type ClientService interface {
-	MarathonDashboard(params *MarathonDashboardParams) (*MarathonDashboardOK, error)
-
-	SetTransport(transport runtime.ClientTransport)
-}
-
 /*
-  MarathonDashboard gets marathon service instances and their shards
+MarathonDashboard gets marathon service instances and their shards
 */
 func (a *Client) MarathonDashboard(params *MarathonDashboardParams) (*MarathonDashboardOK, error) {
 	// TODO: Validate the params before sending

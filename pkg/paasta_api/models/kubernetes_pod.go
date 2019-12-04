@@ -6,29 +6,18 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	"strconv"
+	strfmt "github.com/go-openapi/strfmt"
 
 	"github.com/go-openapi/errors"
-	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
 
 // KubernetesPod kubernetes pod
-//
 // swagger:model KubernetesPod
 type KubernetesPod struct {
 
-	// containers
-	Containers []*KubernetesContainer `json:"containers"`
-
 	// Time at which the pod was deployed
 	DeployedTimestamp float32 `json:"deployed_timestamp,omitempty"`
-
-	// name of the pod's host
-	Host string `json:"host,omitempty"`
-
-	// long message explaining the pod's state
-	Message *string `json:"message,omitempty"`
 
 	// name of the pod in Kubernetes
 	Name string `json:"name,omitempty"`
@@ -36,18 +25,15 @@ type KubernetesPod struct {
 	// The status of the pod
 	Phase string `json:"phase,omitempty"`
 
-	// Whether or not the pod is ready (i.e. all containers up)
-	Ready bool `json:"ready,omitempty"`
-
-	// short message explaining the pod's state
-	Reason *string `json:"reason,omitempty"`
+	// Stdout and stderr tail of the task
+	TailLines *TaskTailLines `json:"tail_lines,omitempty"`
 }
 
 // Validate validates this kubernetes pod
 func (m *KubernetesPod) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateContainers(formats); err != nil {
+	if err := m.validateTailLines(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -57,26 +43,19 @@ func (m *KubernetesPod) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *KubernetesPod) validateContainers(formats strfmt.Registry) error {
+func (m *KubernetesPod) validateTailLines(formats strfmt.Registry) error {
 
-	if swag.IsZero(m.Containers) { // not required
+	if swag.IsZero(m.TailLines) { // not required
 		return nil
 	}
 
-	for i := 0; i < len(m.Containers); i++ {
-		if swag.IsZero(m.Containers[i]) { // not required
-			continue
-		}
-
-		if m.Containers[i] != nil {
-			if err := m.Containers[i].Validate(formats); err != nil {
-				if ve, ok := err.(*errors.Validation); ok {
-					return ve.ValidateName("containers" + "." + strconv.Itoa(i))
-				}
-				return err
+	if m.TailLines != nil {
+		if err := m.TailLines.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("tail_lines")
 			}
+			return err
 		}
-
 	}
 
 	return nil

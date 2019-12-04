@@ -10,7 +10,8 @@ import (
 	"io"
 
 	"github.com/go-openapi/runtime"
-	"github.com/go-openapi/strfmt"
+
+	strfmt "github.com/go-openapi/strfmt"
 )
 
 // GetServiceAutoscalerPauseReader is a Reader for the GetServiceAutoscalerPause structure.
