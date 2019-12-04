@@ -9,14 +9,12 @@ import (
 	"syscall"
 )
 
+// map[string]bool is emulating a set
 func listPaastaCommands() (map[string]bool, error) {
-	// alternatively:
-	// find $(echo $PATH | tr ':' ' ') -maxdepth 1 -xtype f -perm /o+x -name paasta-*
 	cmd := exec.Command("/bin/bash", "-p", "-c", "compgen -A command paasta-")
 	var out bytes.Buffer
 	cmd.Stdout = &out
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return nil, err
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(out.Bytes()))
@@ -29,37 +27,46 @@ func listPaastaCommands() (map[string]bool, error) {
 
 func main() {
 	var cmds map[string]bool = nil
-	var subcmd string
+	var cmdPath string
 	var args []string
 
 	if len(os.Args) > 1 {
 		var err error
 		cmds, err = listPaastaCommands()
 		if err != nil {
-			fmt.Printf("Error generating list of sub-commands: %s\n", err)
+			fmt.Fprintf(
+				os.Stderr,
+				"Error generating list of sub-commands: %s\n",
+				err,
+			)
 			os.Exit(1)
 		}
 
-		cmd := fmt.Sprintf("paasta-%s", os.Args[1])
-		if ok, _ := cmds[cmd]; ok {
+		fullCmdName := fmt.Sprintf("paasta-%s", os.Args[1])
+		if _, ok := cmds[fullCmdName]; ok {
 			var err error
-			subcmd, err = exec.LookPath(cmd)
+			cmdPath, err = exec.LookPath(fullCmdName)
 			if err != nil {
-				fmt.Printf("Couldn't lookup %s in PATH: %s\n", cmd, err)
+				fmt.Fprintf(
+					os.Stderr,
+					"Couldn't lookup %s in PATH: %s\n",
+					fullCmdName,
+					err,
+				)
 				os.Exit(1)
 			}
 		}
 	}
 
-	if subcmd == "" {
-		subcmd = "/usr/bin/paasta"
+	if cmdPath == "" {
+		cmdPath = "/usr/bin/paasta"
 		args = os.Args
 	} else {
 		args = os.Args[1:]
 	}
 
-	if err := syscall.Exec(subcmd, args, os.Environ()); err != nil {
-		fmt.Printf("Error running %s: %s", subcmd, err)
+	if err := syscall.Exec(cmdPath, args, os.Environ()); err != nil {
+		fmt.Fprintf(os.Stderr, "Error running %s: %s", cmdPath, err)
 		os.Exit(1)
 	}
 }
