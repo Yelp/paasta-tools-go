@@ -59,7 +59,7 @@ func main() {
 	}
 
 	if cmdPath == "" {
-		cmdPath = "/usr/bin/paasta"
+		cmdPath = "/opt/venvs/paasta-tools/bin/paasta"
 		args = os.Args
 	} else {
 		args = os.Args[1:]
