@@ -70,6 +70,7 @@ func NewStore(dir string, hints map[string]string) *Store {
 	}
 	return &Store{
 		Dir:        dir,
+		Data:       map[string]interface{}{},
 		Hints:      hints,
 		ListFiles:  listFiles,
 		ParseFile:  parseFile,
@@ -81,7 +82,7 @@ func NewStore(dir string, hints map[string]string) *Store {
 // a new map, merge loaded data into the copy and swap `s.data`
 func (s *Store) loadPath(path string) error {
 	value := map[string]interface{}{}
-	err := s.ParseFile(path, value)
+	err := s.ParseFile(path, &value)
 	if err != nil {
 		return err
 	}
@@ -146,7 +147,11 @@ func (s *Store) Get(key string) (interface{}, error) {
 	} else {
 		file = key
 	}
-	s.load(file)
+
+	err := s.load(file)
+	if err != nil {
+		return nil, err
+	}
 
 	val, ok := s.Data[key]
 	if !ok {
