@@ -33,6 +33,7 @@ docker_build_%:
 deb_%: clean docker_build_%
 	$(DOCKER_RUN) /bin/bash -c ' \
 		$(MAKE) cmd && \
+		mv bin/paasta{-tools-paasta,_go} && \
 		fpm --output-type deb --input-type dir --version $(VERSION) \
 			--deb-dist $* --deb-priority optional \
 			--name paasta-tools-go --package dist \
