@@ -18,3 +18,5 @@ require (
 	k8s.io/kubernetes v1.14.0
 	sigs.k8s.io/yaml v1.1.0 // indirect
 )
+
+go 1.13
