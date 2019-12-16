@@ -12,8 +12,8 @@ require (
 	golang.org/x/text v0.3.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.2.2 // indirect
-	k8s.io/api v0.0.0-20190202010724-74b699b93c15
-	k8s.io/apimachinery v0.0.0-20190216013122-f05b8decd79c
+	k8s.io/api v0.0.0-20190313235455-40a48860b5ab
+	k8s.io/apimachinery v0.0.0-20190313205120-d7deff9243b1
 	k8s.io/klog v0.2.0 // indirect
 	k8s.io/kubernetes v1.14.0
 	sigs.k8s.io/yaml v1.1.0 // indirect
