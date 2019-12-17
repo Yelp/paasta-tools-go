@@ -13,6 +13,7 @@ import (
 
 	harness "github.com/dlespiau/kube-test-harness"
 	"github.com/dlespiau/kube-test-harness/logger"
+	htesting "github.com/dlespiau/kube-test-harness/testing"
 	"github.com/subosito/gotenv"
 )
 
@@ -29,6 +30,15 @@ func (h *Harness) Close() error {
 func (h *Harness) Run(m *testing.M) int {
 	defer h.Close()
 	return h.Harness.Run(m)
+}
+
+func (h *Harness) NewTest(t htesting.T) *Test {
+	test := h.Harness.NewTest(t)
+	return &Test{
+		Test: *test,
+		stopOperator: false,
+		harness: h,
+	}
 }
 
 type Options struct {
@@ -194,6 +204,11 @@ func (d *pipeDevNull) Make(dst io.Writer, src io.Reader) outputFn {
 }
 
 func stopCluster(options Options) {
+	// Do not stop the cluster if panicking, to enable troubleshooting
+	if r := recover(); r != nil {
+		log.Printf("Keeping the cluster running for troubleshooting")
+		panic(r)
+	}
 	if options.NoCleanup {
 		log.Printf("Keeping the cluster running")
 		return
