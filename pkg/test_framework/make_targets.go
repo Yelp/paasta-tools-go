@@ -55,7 +55,7 @@ type handlerFn func(cmd *exec.Cmd)
 // No logging occurs inside this function. This function will block until
 // all 3 functors have finished, so for truly asynchronous execution you
 // may want to spawn goroutines inside each.
-func start(handler handlerFn, coutFactory outputFnFactory, cerrFactory outputFnFactory, args []string) error {
+func start(handler handlerFn, coutFactory outputFnFactory, cerrFactory outputFnFactory, sinks Sinks, args []string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	coutReader, err := cmd.StdoutPipe()
 	if err != nil {
@@ -66,8 +66,20 @@ func start(handler handlerFn, coutFactory outputFnFactory, cerrFactory outputFnF
 		return err
 	}
 
-	cout := coutFactory.Make(os.Stdout, coutReader)
-	cerr := cerrFactory.Make(os.Stderr, cerrReader)
+	var cout outputFn
+	if sinks.Stdout == nil {
+		cout = coutFactory.Make(os.Stdout, coutReader)
+	} else {
+		cout = coutFactory.Make(sinks.Stdout, coutReader)
+	}
+
+	var cerr outputFn
+	if sinks.Stderr == nil {
+		cerr = cerrFactory.Make(os.Stderr, cerrReader)
+	} else {
+		cerr = cerrFactory.Make(sinks.Stderr, cerrReader)
+	}
+
 	err = cmd.Start()
 	if err != nil {
 		return err
@@ -103,7 +115,7 @@ func (d *outputCopier) Make(dst io.Writer, src io.Reader) outputFn {
 
 // Wrapper for start() function, more specialized synchronous executor
 // similar to exec.Command().Run()
-func run(coutFactory outputFnFactory, cerrFactory outputFnFactory, args []string) error {
+func run(coutFactory outputFnFactory, cerrFactory outputFnFactory, sinks Sinks, args []string) error {
 	if coutFactory == nil {
 		coutFactory = &outputCopier{}
 	}
@@ -114,7 +126,7 @@ func run(coutFactory outputFnFactory, cerrFactory outputFnFactory, args []string
 	var handler handlerFn = func(cmd *exec.Cmd) {
 		result = cmd.Wait()
 	}
-	if err := start(handler, coutFactory, cerrFactory, args); err != nil {
+	if err := start(handler, coutFactory, cerrFactory, sinks, args); err != nil {
 		return err
 	}
 	return result

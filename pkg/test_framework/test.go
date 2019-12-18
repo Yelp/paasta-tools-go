@@ -24,7 +24,7 @@ type Test struct {
 }
 
 func (t *Test) StartOperator() error {
-	err := startOperator(t.harness.Options)
+	err := startOperator(t.harness.Options, t.harness.Sinks)
 	if err == nil {
 		t.stopOperator = true
 	}
@@ -33,7 +33,7 @@ func (t *Test) StartOperator() error {
 
 func (t *Test) StopOperator() {
 	if t.stopOperator {
-		stopOperator(t.harness.Options)
+		stopOperator(t.harness.Options, t.harness.Sinks)
 		t.stopOperator = false
 	}
 }
@@ -86,7 +86,7 @@ func (d *asyncOutputCopier) Make(dst io.Writer, src io.Reader) outputFn {
 	}
 }
 
-func startOperator(options Options) error {
+func startOperator(options Options, sinks Sinks) error {
 	// The logic is not obvious, so some explanation follows:
 	// when we start the operator process for testing, it is possible that the process
 	// will fail right away, because of some early-manifest bug.
@@ -134,17 +134,20 @@ func startOperator(options Options) error {
 	cerrFactory := &asyncOutputCopier{}
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
-	if err := start(handler, coutFactory, cerrFactory, args); err != nil {
+	// let's use sinks.Operator as Stdout for operator output
+	operatorSinks := sinks
+	operatorSinks.Stdout = sinks.Operator
+	if err := start(handler, coutFactory, cerrFactory, operatorSinks, args); err != nil {
 		return err
 	}
 	return result
 }
 
-func stopOperator(options Options) {
+func stopOperator(options Options, sinks Sinks) {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
-	_ = run(&pipeDevNull{}, &pipeDevNull{}, args)
+	_ = run(&pipeDevNull{}, &pipeDevNull{}, sinks, args)
 	log.Print("... done")
 }

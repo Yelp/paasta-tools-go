@@ -20,10 +20,11 @@ import (
 type Harness struct {
 	harness.Harness
 	Options Options
+	Sinks   Sinks
 }
 
 func (h *Harness) Close() error {
-	stopCluster(h.Options)
+	stopCluster(h.Options, h.Sinks)
 	return nil
 }
 
@@ -48,9 +49,17 @@ type Options struct {
 	Prefix   string
 }
 
+// Users can use these to capture the "console" output from the spawned sub-processes rather than
+// the default os.Stdout and/or os.Stderr . Capturing the output this way might be useful in tests.
+type Sinks struct {
+	Stdout    io.Writer
+	Stderr    io.Writer
+	Operator  io.Writer
+}
+
 var Kube *Harness
 
-func Start(m *testing.M) {
+func Parse() *Options {
 	noCleanup := flag.Bool("k8s.no-cleanup", false, "should test cleanup after themselves")
 	verbose := flag.Bool("k8s.log.verbose", false, "turn on more verbose logging")
 	makefile := flag.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to makedir")
@@ -60,6 +69,7 @@ func Start(m *testing.M) {
 
 	flag.Parse()
 
+	// NOTE: We call "sanitize" functions both here and in Start()
 	options := Options{
 		Options: harness.Options{
 			ManifestDirectory: *manifests,
@@ -74,9 +84,20 @@ func Start(m *testing.M) {
 		options.LogLevel = logger.Debug
 	}
 
-	Kube = startHarness(options)
+	return &options
 }
 
+func Start(m *testing.M, options Options, sinks Sinks) {
+	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
+	// strong coupling, i.e. we do not make strong assumption as to the format
+	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
+	options.MakeDir = sanitizeMakeDir(options.MakeDir)
+	options.Prefix = sanitizePrefix(options.Prefix)
+	Kube = startHarness(options, sinks)
+}
+
+// NOTE: this function MUST be idempotent, because it will be called both
+// when parsing the parameters and when starting the Kube harness
 func sanitizeMakeDir(makedir string) string {
 	if makedir == "" {
 		makedir = "."
@@ -89,6 +110,7 @@ func sanitizeMakeDir(makedir string) string {
 	return result
 }
 
+// NOTE: this function MUST be idempotent (ditto)
 func sanitizePrefix(prefix string) string {
 	if len(prefix) > 0 {
 		// Regexp help is here: https://golang.org/pkg/regexp/syntax/
@@ -103,24 +125,25 @@ func sanitizePrefix(prefix string) string {
 	return prefix
 }
 
-func startHarness(options Options) *Harness {
-	checkMakefile(options)
-	buildEnv(options)
-	stopCluster(options)
-	startCluster(options)
+func startHarness(options Options, sinks Sinks) *Harness {
+	checkMakefile(options, sinks)
+	buildEnv(options, sinks)
+	stopCluster(options, sinks)
+	startCluster(options, sinks)
 	return &Harness{
 		Harness: *harness.New(options.Options),
 		Options: options,
+		Sinks:   sinks,
 	}
 }
 
-func checkMakefile(options Options) {
+func checkMakefile(options Options, sinks Sinks) {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	check := func(target string) {
 		args := []string{"make", "-s", "-f", makefile, "-C", makedir, "--dry-run", target}
 		log.Printf("Checking %v ...", args)
-		err := run(nil, nil, args)
+		err := run(nil, nil, sinks, args)
 		if err != nil {
 			log.Panicf("error checking target %s: %v", target, err)
 		} else {
@@ -154,13 +177,13 @@ func (d *envScanner) Make(dst io.Writer, src io.Reader) outputFn {
 	}
 }
 
-func buildEnv(options Options) {
+func buildEnv(options Options, sinks Sinks) {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	exports := envScanner{}
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.env()}
 	log.Printf("Running %v ...", args)
-	err := run(&exports, nil, args)
+	err := run(&exports, nil, sinks, args)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -184,12 +207,12 @@ func buildEnv(options Options) {
 	}
 }
 
-func startCluster(options Options) {
+func startCluster(options Options, sinks Sinks) {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStart()}
 	log.Printf("Running %v ...", args)
-	err := run(nil, nil, args)
+	err := run(nil, nil, sinks, args)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -203,7 +226,7 @@ func (d *pipeDevNull) Make(dst io.Writer, src io.Reader) outputFn {
 	return func() {}
 }
 
-func stopCluster(options Options) {
+func stopCluster(options Options, sinks Sinks) {
 	// Do not stop the cluster if panicking, to enable troubleshooting
 	if r := recover(); r != nil {
 		log.Printf("Keeping the cluster running for troubleshooting")
@@ -218,6 +241,6 @@ func stopCluster(options Options) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStop()}
 	log.Printf("Running %v ...", args)
 	// if this fails that's perfectly OK - the cluster might not have been running!
-	_ = run(&pipeDevNull{}, &pipeDevNull{}, args)
+	_ = run(&pipeDevNull{}, &pipeDevNull{}, sinks, args)
 	log.Print("... done")
 }
