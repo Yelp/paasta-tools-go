@@ -17,6 +17,11 @@ type Test struct {
 	harness *Harness
 }
 
+func (t *Test) Setup() *Test {
+	_ = t.Test.Setup()
+	return t
+}
+
 func (t *Test) StartOperator() error {
 	if t.stopOperator == true {
 		return fmt.Errorf("operator already started")
