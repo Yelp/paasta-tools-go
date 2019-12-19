@@ -64,12 +64,6 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 	}
 	errScan := bufio.NewScanner(errPipe)
 
-	err = cmd.Start()
-	if err != nil {
-		return err
-	}
-	// otherwise the process started and is running now
-
 	go func() {
 		for outScan.Scan() {
 			// we need our delimiter back!
@@ -90,6 +84,12 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 			os.Stderr.Write(line)
 		}
 	}()
+
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+	// otherwise the process started and is running now
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)

@@ -188,7 +188,7 @@ tests-cluster-stop %s
 $`, rnd, rnd, rnd, rnd)
 	err := kube.Close()
 	assert.NoError(t, err)
-	assert.Regexp(t, cmp + "$", cout.String())
+	assert.Regexp(t, cmp, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
 }
@@ -218,7 +218,7 @@ fail-close-cluster-start %s
 $`, rnd, rnd)
 	err := kube.Close()
 	assert.NoError(t, err)
-	assert.Regexp(t, cmp + "$", cout.String())
+	assert.Regexp(t, cmp, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
 }
