@@ -126,9 +126,8 @@ func startOperator(options Options, sinks Sinks) error {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
-	operatorSinks := Sinks{sinks.Operator, nil, nil}
 	handler := asynchronousHandler{}
-	if err := start(&handler, nil, operatorSinks, args); err != nil {
+	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
 		return err
 	}
 	return handler.result
@@ -139,6 +138,6 @@ func stopOperator(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
-	_ = run(nil, sinks, args)
+	_ = run(sinks.Stdout, sinks.Stderr, args)
 	log.Print("... done")
 }

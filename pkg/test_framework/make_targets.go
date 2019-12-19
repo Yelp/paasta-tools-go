@@ -50,7 +50,7 @@ type Handler interface {
 // No logging occurs inside this function. This function will block until
 // all 3 functors have finished, so for truly asynchronous execution you
 // may want to spawn goroutines inside each.
-func start(handler Handler, outSink io.Writer, sinks Sinks, args []string) error {
+func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []string) error {
 	cmd := exec.Command(args[0], args[1:]...)
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
@@ -74,11 +74,8 @@ func start(handler Handler, outSink io.Writer, sinks Sinks, args []string) error
 		for outScan.Scan() {
 			// we need our delimiter back!
 			line := append(outScan.Bytes(), '\n')
-			if sinks.Stdout != nil {
-				sinks.Stdout.Write(line)
-			}
-			if outSink != nil {
-				outSink.Write(line)
+			for _, s := range outSinks {
+				s.Write(line)
 			}
 			os.Stdout.Write(line)
 		}
@@ -87,8 +84,8 @@ func start(handler Handler, outSink io.Writer, sinks Sinks, args []string) error
 		for errScan.Scan() {
 			// we need our delimiter back!
 			line := append(errScan.Bytes(), '\n')
-			if sinks.Stderr != nil {
-				sinks.Stderr.Write(line)
+			for _, s := range errSinks {
+				s.Write(line)
 			}
 			os.Stderr.Write(line)
 		}
@@ -114,9 +111,9 @@ func(h *blockingHandler) Handle(cmd *exec.Cmd) {
 
 // Wrapper for start() function, more specialized synchronous executor
 // similar to exec.Command().Run()
-func run(outSink io.Writer, sinks Sinks, args []string) error {
+func run(outSinks []io.Writer, errSinks []io.Writer, args []string) error {
 	handler := blockingHandler{}
-	if err := start(&handler, outSink, sinks, args); err != nil {
+	if err := start(&handler, outSinks, errSinks, args); err != nil {
 		return err
 	}
 	return handler.result

@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -73,16 +74,25 @@ func TestSanitizePrefix(t *testing.T) {
 	assert.Panics(t, func() {sanitizePrefix(" abc ")} )
 }
 
+// Just run makefile with no sinks to capture the output
+func TestRunNoOutput(t *testing.T) {
+	args := []string{"make", "-s", "-C", "tests", "default"}
+	_ = os.Setenv("RND", "BAZ")
+	err := run([]io.Writer{}, nil, args)
+	assert.NoError(t, err)
+	err = run(nil, []io.Writer{}, args)
+	assert.NoError(t, err)
+}
+
 // Just run makefile and see we have some output
 func TestRunSimple(t *testing.T) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
 	args := []string{"make", "-s", "-C", "tests", "default"}
 	_ = os.Setenv("RND", "BAZ")
-	err := run( nil, sinks, args)
+	err := run([]io.Writer{&cout}, []io.Writer{&cerr}, args)
 	assert.NoError(t, err)
-	assert.Regexp(t, "^default BAZ\n$", cout.String())
+	assert.Equal(t, "default BAZ\n", cout.String())
 	assert.Empty(t, cerr.String())
 }
 
@@ -103,7 +113,8 @@ func TestCheckAll(t *testing.T) {
 	options := *newOptions()
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
@@ -112,6 +123,7 @@ echo "tests-operator-start \$\{RND\}"
 echo "tests-operator-stop \$\{RND\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
+	assert.Empty(t, operator.String())
 }
 
 func TestCheckFail(t *testing.T) {
@@ -120,7 +132,8 @@ func TestCheckFail(t *testing.T) {
 	options.Prefix = "fail-close-"
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	assert.Panics(t, func() { checkMakefile(options, sinks) })
 	// however, stopCluster() just swallows errors
 	stopCluster(options, sinks)
@@ -128,6 +141,7 @@ func TestCheckFail(t *testing.T) {
 echo "fail-close-cluster-start \$\{RND\}"
 $`, cout.String())
 	assert.NotEmpty(t, cerr.String())
+	assert.Empty(t, operator.String())
 }
 
 func TestCheckNoCleanup(t *testing.T) {
@@ -137,7 +151,8 @@ func TestCheckNoCleanup(t *testing.T) {
 	options.NoCleanup = true
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
@@ -145,13 +160,15 @@ echo "fail-close-operator-start \$\{RND\}"
 echo "fail-close-operator-stop \$\{RND\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
+	assert.Empty(t, operator.String())
 }
 
 func TestStart(t *testing.T) {
 	options := *newOptions()
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
 	kube := startHarness(options, sinks)
@@ -173,6 +190,7 @@ $`, rnd, rnd, rnd, rnd)
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
 	assert.Empty(t, cerr.String())
+	assert.Empty(t, operator.String())
 }
 
 func TestStartNoCleanup(t *testing.T) {
@@ -182,7 +200,8 @@ func TestStartNoCleanup(t *testing.T) {
 	options.Prefix = "fail-close-"
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, nil}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
 	kube := startHarness(options, sinks)
@@ -201,4 +220,5 @@ $`, rnd, rnd)
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
 	assert.Empty(t, cerr.String())
+	assert.Empty(t, operator.String())
 }

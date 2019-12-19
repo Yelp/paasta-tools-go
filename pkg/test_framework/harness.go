@@ -51,9 +51,9 @@ type Options struct {
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
 // the default os.Stdout and/or os.Stderr . Capturing the output this way might be useful in tests.
 type Sinks struct {
-	Stdout    io.Writer
-	Stderr    io.Writer
-	Operator  io.Writer
+	Stdout    []io.Writer
+	Stderr    []io.Writer
+	Operator  []io.Writer
 }
 
 var Kube *Harness
@@ -144,7 +144,7 @@ func checkMakefile(options Options, sinks Sinks) {
 	check := func(target string) {
 		args := []string{"make", "-s", "-f", makefile, "-C", makedir, "--dry-run", target}
 		log.Printf("Checking %v ...", args)
-		err := run(nil, sinks, args)
+		err := run(sinks.Stdout, sinks.Stderr, args)
 		if err != nil {
 			log.Panicf("error checking target %s: %v", target, err)
 		} else {
@@ -176,7 +176,10 @@ func buildEnv(options Options, sinks Sinks) {
 	exports := envScanner{}
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.env()}
 	log.Printf("Running %v ...", args)
-	err := run(&exports, sinks, args)
+	// clone sinks.Stdout and add exports
+	cout := append([]io.Writer{}, sinks.Stdout...)
+	cout = append(cout, &exports)
+	err := run(cout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -205,7 +208,7 @@ func startCluster(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStart()}
 	log.Printf("Running %v ...", args)
-	err := run(nil, sinks, args)
+	err := run(sinks.Stdout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -228,6 +231,6 @@ func stopCluster(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStop()}
 	log.Printf("Running %v ...", args)
 	// if this fails that's perfectly OK - the cluster might not have been running!
-	_ = run(nil, sinks, args)
+	_ = run(sinks.Stdout, sinks.Stderr, args)
 	log.Print("... done")
 }

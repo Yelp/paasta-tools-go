@@ -3,6 +3,7 @@ package framework
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -14,7 +15,7 @@ func TestStartQuick(t *testing.T) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, &operator}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
 	kube := startHarness(options, sinks)
@@ -41,8 +42,8 @@ $`, rnd, rnd, rnd, rnd)
 	err = kube.Close()
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
-	cmp = fmt.Sprintf(`^tests-operator-start %s\n`, rnd)
-	assert.Regexp(t, cmp + "$", operator.String())
+	cmp = fmt.Sprintf("tests-operator-start %s\n", rnd)
+	assert.Equal(t, cmp, operator.String())
 	assert.Empty(t, cerr.String())
 }
 
@@ -53,7 +54,7 @@ func TestStartSlow(t *testing.T) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
-	sinks := Sinks{&cout, &cerr, &operator}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
 	kube := startHarness(options, sinks)
@@ -82,7 +83,7 @@ $`, rnd, rnd, rnd)
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
 	// stdout output of the operator goes to the operator sink
-	cmp = fmt.Sprintf(`^test-sleep25-operator-start %s\n`, rnd)
-	assert.Regexp(t, cmp + "$", operator.String())
+	cmp = fmt.Sprintf("test-sleep25-operator-start %s\n", rnd)
+	assert.Equal(t, cmp, operator.String())
 	assert.Empty(t, cerr.String())
 }
