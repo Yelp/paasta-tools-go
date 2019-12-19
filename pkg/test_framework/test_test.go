@@ -6,12 +6,14 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestStartQuick(t *testing.T) {
 	options := *newOptions()
+	options.OperatorStartDelay = 500 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -41,7 +43,7 @@ tests-cluster-stop %s
 $`, rnd, rnd, rnd, rnd)
 	err = kube.Close()
 	assert.NoError(t, err)
-	assert.Regexp(t, cmp + "$", cout.String())
+	assert.Regexp(t, cmp, cout.String())
 	cmp = fmt.Sprintf("tests-operator-start %s\n", rnd)
 	assert.Equal(t, cmp, operator.String())
 	assert.Empty(t, cerr.String())
@@ -49,8 +51,9 @@ $`, rnd, rnd, rnd, rnd)
 
 func TestStartSlow(t *testing.T) {
 	options := *newOptions()
-	options.Prefix = "test-sleep25-"
 	options.NoCleanup = true
+	options.Prefix = "test-sleep05-"
+	options.OperatorStartDelay = 200 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -64,26 +67,29 @@ func TestStartSlow(t *testing.T) {
 	// this will block long enough to register "operator running"
 	err := test.StartOperator()
 	assert.NoError(t, err)
+	err = test.StartOperator()
+	// operator already started
+	assert.NotNil(t, err)
 	test.Close()
 
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
-echo "test-sleep25-cluster-start \$\{RND\}"
-echo "test-sleep25-operator-start \$\{RND\}"
-sleep 2\.5s
-echo "test-sleep25-operator-stop \$\{RND\}"
+echo "test-sleep05-cluster-start \$\{RND\}"
+echo "test-sleep05-operator-start \$\{RND\}"
+sleep 0\.5s
+echo "test-sleep05-operator-stop \$\{RND\}"
 `
 	cmp += fmt.Sprintf(`export RND=%s
-test-sleep25-cluster-start %s
-test-sleep25-operator-stop %s
+test-sleep05-cluster-start %s
+test-sleep05-operator-stop %s
 $`, rnd, rnd, rnd)
 	// intentionally not calling StopOperator(), kube.Close() should call it for us
 	err = kube.Close()
 	assert.NoError(t, err)
-	assert.Regexp(t, cmp + "$", cout.String())
+	assert.Regexp(t, cmp, cout.String())
 	// stdout output of the operator goes to the operator sink
-	cmp = fmt.Sprintf("test-sleep25-operator-start %s\n", rnd)
+	cmp = fmt.Sprintf("test-sleep05-operator-start %s\n", rnd)
 	assert.Equal(t, cmp, operator.String())
 	assert.Empty(t, cerr.String())
 }

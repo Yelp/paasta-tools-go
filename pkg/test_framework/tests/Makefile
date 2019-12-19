@@ -4,9 +4,9 @@ fail:
 fail-close-cluster-stop:
 	$(error $*)
 
-test-sleep25-operator-start:
-	@echo "test-sleep25-operator-start $${RND}"
-	@sleep 2.5s
+test-sleep05-operator-start:
+	@echo "test-sleep05-operator-start $${RND}"
+	@sleep 0.5s
 
 %-env:
 	@echo "export RND=$$(xxd -l8 -p /dev/random)"

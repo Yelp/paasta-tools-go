@@ -10,11 +10,6 @@ import (
 	harness "github.com/dlespiau/kube-test-harness"
 )
 
-const (
-	// TODO move this to Options
-	operatorStartDelay = 2000 * time.Millisecond
-)
-
 type Test struct {
 	harness.Test
 
@@ -23,6 +18,9 @@ type Test struct {
 }
 
 func (t *Test) StartOperator() error {
+	if t.stopOperator == true {
+		return fmt.Errorf("operator already started")
+	}
 	err := startOperator(t.harness.Options, t.harness.Sinks)
 	if err == nil {
 		t.stopOperator = true
@@ -76,6 +74,7 @@ func (c *chanError) close() {
 }
 
 type asynchronousHandler struct {
+	delay time.Duration
 	result error
 }
 
@@ -96,7 +95,7 @@ func(h* asynchronousHandler) Handle(cmd *exec.Cmd) {
 		channel.send(err)
 	}()
 	go func() {
-		time.Sleep(operatorStartDelay)
+		time.Sleep(h.delay)
 		// safe no-op if the channel closed earlier
 		channel.close()
 	}()
@@ -126,7 +125,7 @@ func startOperator(options Options, sinks Sinks) error {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
-	handler := asynchronousHandler{}
+	handler := asynchronousHandler{options.OperatorStartDelay, nil}
 	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
 		return err
 	}

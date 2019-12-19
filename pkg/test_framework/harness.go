@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"testing"
+	"time"
 
 	harness "github.com/dlespiau/kube-test-harness"
 	"github.com/dlespiau/kube-test-harness/logger"
@@ -46,6 +47,7 @@ type Options struct {
 	Makefile string
 	MakeDir  string
 	Prefix   string
+	OperatorStartDelay time.Duration
 }
 
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
@@ -65,6 +67,7 @@ func Parse() *Options {
 	makedir := flag.String("k8s.makedir", "", "directory to makefile")
 	prefix := flag.String("k8s.prefix", "test", "prefix for make cluster manipulation targets")
 	manifests := flag.String("k8s.manifests", "manifests", "directory to K8s manifests")
+	delay := flag.Duration("k8s.op-delay", 2 * time.Second, "operator start delay")
 
 	flag.Parse()
 
@@ -77,9 +80,10 @@ func Parse() *Options {
 			NoCleanup:         *noCleanup,
 			Logger:            &logger.PrintfLogger{},
 		},
-		Makefile: *makefile,
-		MakeDir:  sanitizeMakeDir(*makedir),
-		Prefix:   sanitizePrefix(*prefix),
+		Makefile:           *makefile,
+		MakeDir:            sanitizeMakeDir(*makedir),
+		Prefix:             sanitizePrefix(*prefix),
+		OperatorStartDelay: *delay,
 	}
 	if *verbose {
 		options.LogLevel = logger.Debug
