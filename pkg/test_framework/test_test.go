@@ -33,8 +33,11 @@ echo "tests-cluster-stop \$\{RND\}"
 echo "tests-operator-start \$\{RND\}"
 echo "tests-operator-stop \$\{RND\}"
 `
-	cmp += fmt.Sprintf("export RND=%s\n", rnd)
-	cmp += fmt.Sprintf("tests-cluster-start %s\n", rnd)
+	cmp += fmt.Sprintf(`export RND=%s
+tests-cluster-stop %s
+tests-cluster-start %s
+tests-cluster-stop %s
+$`, rnd, rnd, rnd, rnd)
 	err = kube.Close()
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
@@ -70,11 +73,15 @@ echo "test-sleep25-operator-start \$\{RND\}"
 sleep 2\.5s
 echo "test-sleep25-operator-stop \$\{RND\}"
 `
-	cmp += fmt.Sprintf("export RND=%s\n", rnd)
-	cmp += fmt.Sprintf("test-sleep25-cluster-start %s\n", rnd)
+	cmp += fmt.Sprintf(`export RND=%s
+test-sleep25-cluster-start %s
+test-sleep25-operator-stop %s
+$`, rnd, rnd, rnd)
+	// intentionally not calling StopOperator(), kube.Close() should call it for us
 	err = kube.Close()
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
+	// stdout output of the operator goes to the operator sink
 	cmp = fmt.Sprintf(`^test-sleep25-operator-start %s\n`, rnd)
 	assert.Regexp(t, cmp + "$", operator.String())
 	assert.Empty(t, cerr.String())

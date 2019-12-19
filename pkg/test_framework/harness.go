@@ -1,7 +1,6 @@
 package framework
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"io"
@@ -69,7 +68,9 @@ func Parse() *Options {
 
 	flag.Parse()
 
-	// NOTE: We call "sanitize" functions both here and in Start()
+	// NOTE: We call "sanitize" functions both here and in Start(). This is to enable
+	// the users to create Options by hand, in case if they do not want to use this
+	// Parse() function e.g. due to command line options processing here.
 	options := Options{
 		Options: harness.Options{
 			ManifestDirectory: *manifests,
@@ -143,7 +144,7 @@ func checkMakefile(options Options, sinks Sinks) {
 	check := func(target string) {
 		args := []string{"make", "-s", "-f", makefile, "-C", makedir, "--dry-run", target}
 		log.Printf("Checking %v ...", args)
-		err := run(nil, nil, sinks, args)
+		err := run(nil, sinks, args)
 		if err != nil {
 			log.Panicf("error checking target %s: %v", target, err)
 		} else {
@@ -164,17 +165,9 @@ type envScanner struct {
 	Out []byte
 }
 
-func (d *envScanner) Make(dst io.Writer, src io.Reader) outputFn {
-	scanner := bufio.NewScanner(src)
-	return func() {
-		for scanner.Scan() {
-			// we need our delimiter back!
-			line := append(scanner.Bytes(), '\n')
-			d.Out = append(d.Out, line...)
-			// don't care if this might fail
-			_, _ = dst.Write(line)
-		}
-	}
+func (d *envScanner) Write(line []byte) (n int, err error) {
+	d.Out = append(d.Out, line...)
+	return len(line), nil
 }
 
 func buildEnv(options Options, sinks Sinks) {
@@ -183,7 +176,7 @@ func buildEnv(options Options, sinks Sinks) {
 	exports := envScanner{}
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.env()}
 	log.Printf("Running %v ...", args)
-	err := run(&exports, nil, sinks, args)
+	err := run(&exports, sinks, args)
 	if err != nil {
 		log.Panic(err)
 		return
@@ -212,18 +205,12 @@ func startCluster(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStart()}
 	log.Printf("Running %v ...", args)
-	err := run(nil, nil, sinks, args)
+	err := run(nil, sinks, args)
 	if err != nil {
 		log.Panic(err)
 		return
 	}
 	log.Print("... done")
-}
-
-type pipeDevNull struct{}
-
-func (d *pipeDevNull) Make(dst io.Writer, src io.Reader) outputFn {
-	return func() {}
 }
 
 func stopCluster(options Options, sinks Sinks) {
@@ -241,6 +228,6 @@ func stopCluster(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStop()}
 	log.Printf("Running %v ...", args)
 	// if this fails that's perfectly OK - the cluster might not have been running!
-	_ = run(&pipeDevNull{}, &pipeDevNull{}, sinks, args)
+	_ = run(nil, sinks, args)
 	log.Print("... done")
 }

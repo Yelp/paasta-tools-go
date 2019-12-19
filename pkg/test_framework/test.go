@@ -2,7 +2,6 @@ package framework
 
 import (
 	"fmt"
-	"io"
 	"log"
 	"os/exec"
 	"sync/atomic"
@@ -76,71 +75,63 @@ func (c *chanError) close() {
 	}
 }
 
-type asyncOutputCopier struct{}
+type asynchronousHandler struct {
+	result error
+}
 
-func (d *asyncOutputCopier) Make(dst io.Writer, src io.Reader) outputFn {
-	return func() {
-		go func() {
-			_, _ = io.Copy(dst, src)
-		}()
+// The logic is not obvious, so some explanation follows:
+// when we start the operator process for testing, it is possible that the process
+// will fail right away, because of some early-manifest bug. It might also
+// for some reason exit prematurely, without reporting an error.
+// To discover when this happens, we will wait for the process to return (possibly
+// with an error), and will also start a timer to close the channel for the status
+// when operatorStartDelay has elapsed.
+// If we have received anything on the channel (before it closed), it means that
+// the program completed; otherwise we consider it running.
+func(h* asynchronousHandler) Handle(cmd *exec.Cmd) {
+	channel := newChanError()
+	go func() {
+		err := cmd.Wait()
+		// will only succeed to send an error if completed before operatorStartDelay
+		channel.send(err)
+	}()
+	go func() {
+		time.Sleep(operatorStartDelay)
+		// safe no-op if the channel closed earlier
+		channel.close()
+	}()
+
+	// wait on channel.data will complete when either happens:
+	// * channel.send(err), i.e. program completed, possibly with error
+	// * channel.close(), i.e. Sleep(operatorStartDelay) elapsed
+	if err, ok := <-channel.data; ok {
+		if err == nil {
+			// This will happen if channel.send(nil) was called above, which
+			// indicates that the make target to start the operator has
+			// exited prematurely, but with success status. This indicates
+			// an unknown error, since we expect "make start operator" to block
+			// while the operator is running
+			err = fmt.Errorf("operator not running")
+		}
+		h.result = err
+		// NOTE: it is recipient responsibility to call close(c.data)
+		close(channel.data)
 	}
 }
 
 func startOperator(options Options, sinks Sinks) error {
-	// The logic is not obvious, so some explanation follows:
-	// when we start the operator process for testing, it is possible that the process
-	// will fail right away, because of some early-manifest bug.
-	// To discover when this happens, we will wait for the process to return an
-	// error, and will also start a timer to close the channel for that error
-	// when operatorStartDelay has elapsed.
-	// If we have received an error on the channel, that means the program completed
-	// with error before the channel closed; otherwise we consider it running.
-	var result error = nil
-	var handler handlerFn = func(cmd *exec.Cmd) {
-		channel := newChanError()
-		go func() {
-			err := cmd.Wait()
-			// will only succeed to send an error if completed before operatorStartDelay
-			channel.send(err)
-		}()
-		go func() {
-			time.Sleep(operatorStartDelay)
-			// safe no-op if the channel closed earlier
-			channel.close()
-		}()
-
-		// wait on channel.data will complete when either happens:
-		// * channel.send(err), i.e. program completed with error
-		// * channel.close(), i.e. program completed with success or
-		//   Sleep(operatorStartDelay) elapsed
-		if err, ok := <-channel.data; ok {
-			if err == nil {
-				// This will happen if channel.send(nil) was called above, which
-				// indicates that the make target to start the operator has
-				// exited prematurely, but with success status. This indicates
-				// an unknown error, since we expect "make start operator" to block
-				// while the operator is running
-				err = fmt.Errorf("operator not running")
-			}
-			result = err
-			// NOTE: it is recipient responsibility to call close(c.data)
-			close(channel.data)
-		}
-	}
 
 	makefile := options.Makefile
 	makedir := options.MakeDir
-	coutFactory := &asyncOutputCopier{}
-	cerrFactory := &asyncOutputCopier{}
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
-	operatorSinks := sinks
-	operatorSinks.Stdout = sinks.Operator
-	if err := start(handler, coutFactory, cerrFactory, operatorSinks, args); err != nil {
+	operatorSinks := Sinks{sinks.Operator, nil, nil}
+	handler := asynchronousHandler{}
+	if err := start(&handler, nil, operatorSinks, args); err != nil {
 		return err
 	}
-	return result
+	return handler.result
 }
 
 func stopOperator(options Options, sinks Sinks) {
@@ -148,6 +139,6 @@ func stopOperator(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
-	_ = run(&pipeDevNull{}, &pipeDevNull{}, sinks, args)
+	_ = run(nil, sinks, args)
 	log.Print("... done")
 }

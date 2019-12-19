@@ -80,7 +80,7 @@ func TestRunSimple(t *testing.T) {
 	sinks := Sinks{&cout, &cerr, nil}
 	args := []string{"make", "-s", "-C", "tests", "default"}
 	_ = os.Setenv("RND", "BAZ")
-	err := run(nil, nil, sinks, args)
+	err := run( nil, sinks, args)
 	assert.NoError(t, err)
 	assert.Regexp(t, "^default BAZ\n$", cout.String())
 	assert.Empty(t, cerr.String())
@@ -164,8 +164,11 @@ echo "tests-cluster-stop \$\{RND\}"
 echo "tests-operator-start \$\{RND\}"
 echo "tests-operator-stop \$\{RND\}"
 `
-	cmp += fmt.Sprintf("export RND=%s\n", rnd)
-	cmp += fmt.Sprintf("tests-cluster-start %s\n", rnd)
+	cmp += fmt.Sprintf(`export RND=%s
+tests-cluster-stop %s
+tests-cluster-start %s
+tests-cluster-stop %s
+$`, rnd, rnd, rnd, rnd)
 	err := kube.Close()
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
@@ -191,8 +194,9 @@ echo "fail-close-cluster-start \$\{RND\}"
 echo "fail-close-operator-start \$\{RND\}"
 echo "fail-close-operator-stop \$\{RND\}"
 `
-	cmp += fmt.Sprintf("export RND=%s\n", rnd)
-	cmp += fmt.Sprintf("fail-close-cluster-start %s\n", rnd)
+	cmp += fmt.Sprintf(`export RND=%s
+fail-close-cluster-start %s
+$`, rnd, rnd)
 	err := kube.Close()
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp + "$", cout.String())
