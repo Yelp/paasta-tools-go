@@ -14,6 +14,7 @@ import (
 	harness "github.com/dlespiau/kube-test-harness"
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
+	"github.com/pkg/errors"
 	"github.com/subosito/gotenv"
 )
 
@@ -40,6 +41,17 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 		stopOperator: false,
 		harness: h,
 	}
+}
+
+// Copied from github.com/dlespiau/kube-test-harness/blob/master/harness.go
+func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
+	path := filepath.Join(h.Options.ManifestDirectory, manifest)
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, errors.Wrap(err, "open manifest")
+	}
+
+	return f, nil
 }
 
 type Options struct {
