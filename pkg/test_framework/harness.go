@@ -133,7 +133,6 @@ func sanitizeMakeDir(makedir string) string {
 	result, err := filepath.Abs(makedir)
 	if err != nil {
 		log.Panic(err)
-		return ""
 	}
 	return result
 }
@@ -237,14 +236,12 @@ func buildEnv(options Options, sinks Sinks) {
 	err := run(cout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	log.Print("... done")
 
 	env, err := gotenv.StrictParse(bytes.NewReader(exports.Out))
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	for key, val := range env {
 		// Empty environment variable looks the same as undefined to
@@ -252,7 +249,6 @@ func buildEnv(options Options, sinks Sinks) {
 		if old, present := os.LookupEnv(key); !present || old == "" {
 			if err := os.Setenv(key, val); err != nil {
 				log.Panic(err)
-				return
 			}
 		}
 	}
@@ -266,7 +262,6 @@ func startCluster(options Options, sinks Sinks) {
 	err := run(sinks.Stdout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	log.Print("... done")
 }
