@@ -14,14 +14,17 @@ import (
 	harness "github.com/dlespiau/kube-test-harness"
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
-	"github.com/pkg/errors"
 	"github.com/subosito/gotenv"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Harness struct {
 	harness.Harness
 	Options Options
 	Sinks   Sinks
+	client  client.Client
 }
 
 func (h *Harness) Close() error {
@@ -43,15 +46,22 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 	}
 }
 
-// Copied from github.com/dlespiau/kube-test-harness/blob/master/harness.go
+// Borrowed from github.com/dlespiau/kube-test-harness/blob/master/harness.go
 func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 	path := filepath.Join(h.Options.ManifestDirectory, manifest)
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "open manifest")
+		return nil, err
 	}
 
 	return f, nil
+}
+
+func (h *Harness) Client() client.Client {
+	if h.client == nil {
+		log.Panicf("k8s client not initialised")
+	}
+	return h.client
 }
 
 type Options struct {
@@ -111,6 +121,7 @@ func Start(m *testing.M, options Options, sinks Sinks) {
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
 	Kube = startHarness(options, sinks)
+	Kube.client = newClient()
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -142,6 +153,33 @@ func sanitizePrefix(prefix string) string {
 	return prefix
 }
 
+// Borrowed from github.com/dlespiau/kube-test-harness/blob/master/harness.go
+func newClientConfig(kubeconfig string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
+}
+
+func newClient() client.Client {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if len(kubeconfig) == 0 {
+		log.Panicf("KUBECONFIG is empty or not set")
+	}
+
+	config, err := newClientConfig(kubeconfig)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	cclient, err := client.New(config, client.Options{})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return cclient
+}
+
 func startHarness(options Options, sinks Sinks) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
@@ -151,6 +189,7 @@ func startHarness(options Options, sinks Sinks) *Harness {
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
+		client:  nil,
 	}
 }
 
