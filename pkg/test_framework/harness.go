@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -15,6 +16,8 @@ import (
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
 	"github.com/subosito/gotenv"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -122,6 +125,32 @@ func Start(m *testing.M, options Options, sinks Sinks) {
 	options.Prefix = sanitizePrefix(options.Prefix)
 	Kube = startHarness(options, sinks)
 	Kube.client = newClient()
+}
+
+func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
+	reader, _, isJson := yaml.GuessJSONStream(r, bytes.MinRead)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	if !isJson {
+		tmp, err := yaml.ToJSON(data)
+		if err != nil {
+			return nil, err
+		}
+		data = tmp
+	}
+
+	result := unstructured.Unstructured{}
+	err = result.UnmarshalJSON(data)
+	return &result, err
+}
+
+func LoadInto(r io.Reader, into interface{}) error {
+	if err := yaml.NewYAMLOrJSONDecoder(r, bytes.MinRead).Decode(into); err != nil {
+		return err
+	}
+	return nil
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
