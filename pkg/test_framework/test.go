@@ -7,8 +7,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	appsv1 "k8s.io/api/apps/v1"
 	harness "github.com/dlespiau/kube-test-harness"
+	appsv1 "k8s.io/api/apps/v1"
 )
 
 type Test struct {
@@ -41,6 +41,7 @@ func (t *Test) StopOperator() {
 	}
 }
 
+// TODO remove, should be replaced with simple Delete (below)
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 	t.Test.DeleteDeployment(d)
 	t.Test.WaitForDeploymentDeleted(d, timeout)
