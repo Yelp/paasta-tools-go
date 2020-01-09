@@ -119,8 +119,8 @@ func TestCheckAll(t *testing.T) {
 	assert.Regexp(t, `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
-echo "tests-operator-start \$\{RND\}"
-echo "tests-operator-stop \$\{RND\}"
+echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -156,8 +156,8 @@ func TestCheckNoCleanup(t *testing.T) {
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
-echo "fail-close-operator-start \$\{RND\}"
-echo "fail-close-operator-stop \$\{RND\}"
+echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -178,8 +178,8 @@ func TestStart(t *testing.T) {
 	cmp := `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
-echo "tests-operator-start \$\{RND\}"
-echo "tests-operator-stop \$\{RND\}"
+echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 `
 	cmp += fmt.Sprintf(`export RND=%s
 tests-cluster-stop %s
@@ -210,8 +210,8 @@ func TestStartNoCleanup(t *testing.T) {
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
-echo "fail-close-operator-start \$\{RND\}"
-echo "fail-close-operator-stop \$\{RND\}"
+echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 `
 	cmp += fmt.Sprintf(`export RND=%s
 fail-close-cluster-start %s

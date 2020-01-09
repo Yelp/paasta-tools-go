@@ -48,9 +48,9 @@ func (h *Harness) Run(m *testing.M) int {
 func (h *Harness) NewTest(t htesting.T) *Test {
 	test := h.Harness.NewTest(t)
 	return &Test{
-		Test: *test,
-		stopOperator: false,
-		harness: h,
+		Test:            *test,
+		operatorRunning: false,
+		harness:         h,
 	}
 }
 

@@ -3,6 +3,7 @@ package framework
 import (
 	"fmt"
 	"log"
+	"os"
 	"os/exec"
 	"sync/atomic"
 	"time"
@@ -14,8 +15,8 @@ import (
 type Test struct {
 	harness.Test
 
-	stopOperator bool
-	harness *Harness
+	operatorRunning bool
+	harness         *Harness
 }
 
 func (t *Test) Setup() *Test {
@@ -24,24 +25,23 @@ func (t *Test) Setup() *Test {
 }
 
 func (t *Test) StartOperator() error {
-	if t.stopOperator == true {
+	if t.operatorRunning == true {
 		return fmt.Errorf("operator already started")
 	}
-	err := startOperator(t.harness.Options, t.harness.Sinks)
+	err := startOperator(t.Namespace, t.harness.Options, t.harness.Sinks)
 	if err == nil {
-		t.stopOperator = true
+		t.operatorRunning = true
 	}
 	return err
 }
 
 func (t *Test) StopOperator() {
-	if t.stopOperator {
+	if t.operatorRunning {
 		stopOperator(t.harness.Options, t.harness.Sinks)
-		t.stopOperator = false
+		t.operatorRunning = false
 	}
 }
 
-// TODO remove, should be replaced with simple Delete (below)
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 	t.Test.DeleteDeployment(d)
 	t.Test.WaitForDeploymentDeleted(d, timeout)
@@ -130,16 +130,20 @@ func(h* asynchronousHandler) Handle(cmd *exec.Cmd) {
 	}
 }
 
-func startOperator(options Options, sinks Sinks) error {
-
+func startOperator(namespace string, options Options, sinks Sinks) error {
 	makefile := options.Makefile
 	makedir := options.MakeDir
+	_ = os.Setenv("TEST_OPERATOR_NS", namespace)
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
 	handler := asynchronousHandler{options.OperatorStartDelay, nil}
 	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
+		_ = os.Unsetenv("TEST_OPERATOR_NS")
 		return err
+	}
+	if handler.result != nil {
+		_ = os.Unsetenv("TEST_OPERATOR_NS")
 	}
 	return handler.result
 }
@@ -150,5 +154,6 @@ func stopOperator(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
 	_ = run(sinks.Stdout, sinks.Stderr, args)
+	_ = os.Unsetenv("TEST_OPERATOR_NS")
 	log.Print("... done")
 }
