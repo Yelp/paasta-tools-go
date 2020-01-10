@@ -2,7 +2,9 @@ module github.com/Yelp/paasta-tools-go
 
 require (
 	github.com/dlespiau/kube-test-harness v0.0.0-20190930170435-ec3f93e1a754
+	github.com/fatih/color v1.9.0 // indirect
 	github.com/fatih/structs v1.1.0
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/googleapis/gnostic v0.3.1 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
@@ -13,6 +15,7 @@ require (
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/stretchr/testify v1.4.0
 	github.com/subosito/gotenv v1.2.0
+	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
 	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e // indirect
