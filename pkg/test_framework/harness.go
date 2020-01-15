@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -14,14 +15,24 @@ import (
 	harness "github.com/dlespiau/kube-test-harness"
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
-	"github.com/pkg/errors"
 	"github.com/subosito/gotenv"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/apimachinery/pkg/util/yaml"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
+	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type Harness struct {
 	harness.Harness
 	Options Options
 	Sinks   Sinks
+	client  client.Client
 }
 
 func (h *Harness) Close() error {
@@ -37,21 +48,28 @@ func (h *Harness) Run(m *testing.M) int {
 func (h *Harness) NewTest(t htesting.T) *Test {
 	test := h.Harness.NewTest(t)
 	return &Test{
-		Test: *test,
-		stopOperator: false,
-		harness: h,
+		Test:            *test,
+		operatorRunning: false,
+		harness:         h,
 	}
 }
 
-// Copied from github.com/dlespiau/kube-test-harness/blob/master/harness.go
+// Borrowed from github.com/dlespiau/kube-test-harness/blob/master/harness.go
 func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 	path := filepath.Join(h.Options.ManifestDirectory, manifest)
 	f, err := os.Open(path)
 	if err != nil {
-		return nil, errors.Wrap(err, "open manifest")
+		return nil, err
 	}
 
 	return f, nil
+}
+
+func (h *Harness) Client() client.Client {
+	if h.client == nil {
+		log.Panicf("k8s client not initialised")
+	}
+	return h.client
 }
 
 type Options struct {
@@ -111,6 +129,62 @@ func Start(m *testing.M, options Options, sinks Sinks) {
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
 	Kube = startHarness(options, sinks)
+	Kube.client = newClient()
+}
+
+func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
+	reader, _, isJson := yaml.GuessJSONStream(r, bytes.MinRead)
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	if !isJson {
+		tmp, err := yaml.ToJSON(data)
+		if err != nil {
+			return nil, err
+		}
+		data = tmp
+	}
+
+	result := unstructured.Unstructured{}
+	err = result.UnmarshalJSON(data)
+	return &result, err
+}
+
+func LoadInto(r io.Reader, into interface{}) error {
+	if err := yaml.NewYAMLOrJSONDecoder(r, bytes.MinRead).Decode(into); err != nil {
+		return err
+	}
+	return nil
+}
+
+type WaitSource func()(runtime.Object, error)
+
+func WaitFor(reps* int32, timeout time.Duration, from WaitSource) error {
+	wanted := int32(1)
+	if reps != nil {
+		wanted = *reps
+	}
+
+	return wait.Poll(time.Second, timeout, func() (bool, error) {
+		current, err := from()
+		ready := int32(0)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				return false, err
+			}
+			// else let's stick with ready = 0
+		} else {
+			ready, err = getReady(current)
+			if err != nil {
+				return false, err
+			}
+		}
+		if ready == wanted {
+			return true, nil
+		}
+		return false, nil
+	})
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -122,7 +196,6 @@ func sanitizeMakeDir(makedir string) string {
 	result, err := filepath.Abs(makedir)
 	if err != nil {
 		log.Panic(err)
-		return ""
 	}
 	return result
 }
@@ -142,6 +215,63 @@ func sanitizePrefix(prefix string) string {
 	return prefix
 }
 
+func getReady(obj runtime.Object) (int32, error) {
+	switch t := obj.(type) {
+	case *appsv1.StatefulSet:
+		return (*t).Status.ReadyReplicas, nil
+	case *appsv1.Deployment:
+		return (*t).Status.ReadyReplicas, nil
+	case *appsv1.ReplicaSet:
+		return (*t).Status.ReadyReplicas, nil
+	case *appsv1.DaemonSet:
+		return (*t).Status.NumberReady, nil
+	case *batchv1.Job:
+		return (*t).Status.Active, nil
+	case *unstructured.UnstructuredList:
+		return int32(len((*t).Items)), nil
+	case *unstructured.Unstructured:
+		if !t.IsList() {
+			// Consider single object an equivalent for a list of 1
+			return 1, nil
+		}
+		list, err := t.ToList()
+		if err != nil {
+			log.Panic(err)
+		}
+		return int32(len(list.Items)), nil
+	default:
+		log.Panicf("Unsupported type %v", t.GetObjectKind())
+	}
+	return 0, nil
+}
+
+// Borrowed from github.com/dlespiau/kube-test-harness/blob/master/harness.go
+func newClientConfig(kubeconfig string) (*rest.Config, error) {
+	return clientcmd.NewNonInteractiveDeferredLoadingClientConfig(
+		&clientcmd.ClientConfigLoadingRules{ExplicitPath: kubeconfig},
+		&clientcmd.ConfigOverrides{},
+	).ClientConfig()
+}
+
+func newClient() client.Client {
+	kubeconfig := os.Getenv("KUBECONFIG")
+	if len(kubeconfig) == 0 {
+		log.Panicf("KUBECONFIG is empty or not set")
+	}
+
+	config, err := newClientConfig(kubeconfig)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	cclient, err := client.New(config, client.Options{})
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return cclient
+}
+
 func startHarness(options Options, sinks Sinks) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
@@ -151,6 +281,7 @@ func startHarness(options Options, sinks Sinks) *Harness {
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
+		client:  nil,
 	}
 }
 
@@ -198,14 +329,12 @@ func buildEnv(options Options, sinks Sinks) {
 	err := run(cout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	log.Print("... done")
 
 	env, err := gotenv.StrictParse(bytes.NewReader(exports.Out))
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	for key, val := range env {
 		// Empty environment variable looks the same as undefined to
@@ -213,7 +342,6 @@ func buildEnv(options Options, sinks Sinks) {
 		if old, present := os.LookupEnv(key); !present || old == "" {
 			if err := os.Setenv(key, val); err != nil {
 				log.Panic(err)
-				return
 			}
 		}
 	}
@@ -227,7 +355,6 @@ func startCluster(options Options, sinks Sinks) {
 	err := run(sinks.Stdout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
-		return
 	}
 	log.Print("... done")
 }
