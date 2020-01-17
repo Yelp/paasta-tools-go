@@ -43,7 +43,7 @@ func parseFile(path string, value interface{}) error {
 	reader, err := os.Open(path)
 	defer reader.Close()
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to open %s: %v", path, err)
 	}
 
 	return json.NewDecoder(reader).Decode(value)
@@ -83,7 +83,7 @@ func (s *Store) loadPath(path string) error {
 	value := map[string]interface{}{}
 	err := s.ParseFile(path, value)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to parse %s: %v", path, err)
 	}
 
 	s.Lock()
@@ -99,36 +99,42 @@ func (s *Store) loadPath(path string) error {
 func (s *Store) loadAll() error {
 	files, err := s.ListFiles(s.Dir)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to list %s: %v", s.Dir, err)
 	}
 
 	for _, file := range files {
-		err := s.loadPath(path.Join(s.Dir, file))
+		filepath := path.Join(s.Dir, file)
+		err := s.loadPath(filepath)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to load %s: %v", filepath, err)
 		}
 	}
 	return nil
 }
 
+var extensions = []string{"json", "yaml"}
+
 // Look for `file`.json or `file`.yaml, if not found try loading all files and
 // print a warning about hints
 func (s *Store) load(file string) error {
-	extensions := []string{"json", "yaml"}
 	for _, ext := range extensions {
 		path := path.Join(s.Dir, fmt.Sprintf("%s.%s", file, ext))
 		exists, err := s.FileExists(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to find %s: %v", path, err)
 		}
 		if exists {
-			return s.loadPath(path)
+			err = s.loadPath(path)
+			if err != nil {
+				return fmt.Errorf("Failed to load %s: %v", path, err)
+			}
+			return nil
 		}
 	}
 
 	log.Printf(
-		"WARN: loading all configs, consider adding some hints" +
-			fmt.Sprintf("for %s in %s", file, s.Dir),
+		"WARN: loading all configs, consider adding some hints in %s",
+		path.Join(s.Dir, file),
 	)
 	return s.loadAll()
 }
@@ -160,7 +166,7 @@ func (s *Store) Get(key string) (interface{}, error) {
 func (s *Store) Load(key string, dst interface{}) error {
 	val, err := s.Get(key)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get %s: %v", key, err)
 	}
 	return mapstructure.Decode(val, dst)
 }
