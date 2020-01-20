@@ -139,10 +139,17 @@ func (s *Store) load(file string) error {
 	return s.loadAll()
 }
 
+func (s *Store) syncGet(key string) (interface{}, bool) {
+	s.Lock()
+	defer s.Unlock()
+	val, ok := s.Data[key]
+	return val, ok
+}
+
 // Get returns value for given `key`. If not found in `s.data`, call
 // `s.load` function with `file` from `s.hints` or `key` itself.
 func (s *Store) Get(key string) (interface{}, error) {
-	if val, ok := s.Data[key]; ok {
+	if val, ok := s.syncGet(key); ok {
 		return val, nil
 	}
 
@@ -154,7 +161,7 @@ func (s *Store) Get(key string) (interface{}, error) {
 	}
 	s.load(file)
 
-	val, ok := s.Data[key]
+	val, ok := s.syncGet(key)
 	if !ok {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
