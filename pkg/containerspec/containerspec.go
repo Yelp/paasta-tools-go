@@ -15,6 +15,8 @@ const (
 	defaultDisk   = KubeResourceQuantity("1024Mi")
 )
 
+var defaultSpec = newDefaultSpec()
+
 // KubeResourceQuantity : Resource quantity for Kubernetes (e.g.; CPU, mem, disk)
 type KubeResourceQuantity string
 
@@ -40,6 +42,10 @@ func (n KubeResourceQuantity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(n))
 }
 
+func (n KubeResourceQuantity) copy() (KubeResourceQuantity) {
+	return KubeResourceQuantity(string(n))
+}
+
 // PaastaContainerSpec : Spec for any paasta container with basic fields and utilities
 type PaastaContainerSpec struct {
 	CPU       *KubeResourceQuantity `json:"cpus"`
@@ -50,11 +56,16 @@ type PaastaContainerSpec struct {
 
 // GetContainerResources : get resource requirements based on the container spec
 func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequirements, error) {
+	return spec.GetContainerResourcesWithDefaults(defaultSpec)
+}
+
+// GetContainerResources : get resource requirements based on the container spec using defaults when necessary
+func (spec *PaastaContainerSpec) GetContainerResourcesWithDefaults(defaults *PaastaContainerSpec) (*corev1.ResourceRequirements, error) {
 	var cpu KubeResourceQuantity
 	if spec.CPU != nil {
 		cpu = *spec.CPU
 	} else {
-		cpu = defaultCPU
+		cpu = *defaults.CPU
 	}
 	cpuQuantity, err := resource.ParseQuantity(string(cpu))
 	if err != nil {
@@ -65,7 +76,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 	if spec.Memory != nil {
 		memory = spec.Memory.withSuffix()
 	} else {
-		memory = defaultMemory
+		memory = defaults.Memory.withSuffix()
 	}
 	memoryQuantity, err := resource.ParseQuantity(string(memory))
 	if err != nil {
@@ -76,7 +87,7 @@ func (spec *PaastaContainerSpec) GetContainerResources() (*corev1.ResourceRequir
 	if spec.Disk != nil {
 		disk = spec.Disk.withSuffix()
 	} else {
-		disk = defaultDisk
+		disk = defaults.Disk.withSuffix()
 	}
 	diskQuantity, err := resource.ParseQuantity(string(disk))
 	if err != nil {
@@ -141,4 +152,16 @@ func (in *PaastaContainerSpec) DeepCopy() *PaastaContainerSpec {
 	out := new(PaastaContainerSpec)
 	in.DeepCopyInto(out)
 	return out
+}
+
+func newDefaultSpec() *PaastaContainerSpec {
+	cpu := defaultCPU.copy()
+	memory := defaultMemory.copy()
+	disk := defaultDisk.copy()
+	return &PaastaContainerSpec{
+		CPU:       &cpu,
+		Memory:    &memory,
+		Disk:      &disk,
+		DiskLimit: nil,
+	}
 }
