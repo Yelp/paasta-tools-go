@@ -18,6 +18,8 @@ import (
 	"github.com/subosito/gotenv"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -160,6 +162,11 @@ func LoadInto(r io.Reader, into interface{}) error {
 
 type WaitSource func()(runtime.Object, error)
 
+func WaitForNone(timeout time.Duration, from WaitSource) error {
+	none := int32(0)
+	return WaitFor(&none, timeout, from)
+}
+
 func WaitFor(reps* int32, timeout time.Duration, from WaitSource) error {
 	wanted := int32(1)
 	if reps != nil {
@@ -221,12 +228,52 @@ func getReady(obj runtime.Object) (int32, error) {
 		return (*t).Status.ReadyReplicas, nil
 	case *appsv1.Deployment:
 		return (*t).Status.ReadyReplicas, nil
-	case *appsv1.ReplicaSet:
-		return (*t).Status.ReadyReplicas, nil
 	case *appsv1.DaemonSet:
 		return (*t).Status.NumberReady, nil
+	case *appsv1.ReplicaSet:
+		return (*t).Status.ReadyReplicas, nil
 	case *batchv1.Job:
 		return (*t).Status.Active, nil
+	case *appsv1.StatefulSetList:
+		return int32(len((*t).Items)), nil
+	case *appsv1.DeploymentList:
+		return int32(len((*t).Items)), nil
+	case *appsv1.DaemonSetList:
+		return int32(len((*t).Items)), nil
+	case *appsv1.ReplicaSetList:
+		return int32(len((*t).Items)), nil
+	case *appsv1.ControllerRevisionList:
+		return int32(len((*t).Items)), nil
+	case *batchv1.JobList:
+		return int32(len((*t).Items)), nil
+	case *corev1.PodList:
+		return int32(len((*t).Items)), nil
+	case *corev1.ServiceList:
+		return int32(len((*t).Items)), nil
+	case *corev1.ServiceAccountList:
+		return int32(len((*t).Items)), nil
+	case *corev1.EndpointsList:
+		return int32(len((*t).Items)), nil
+	case *corev1.NodeList:
+		return int32(len((*t).Items)), nil
+	case *corev1.NamespaceList:
+		return int32(len((*t).Items)), nil
+	case *corev1.EventList:
+		return int32(len((*t).Items)), nil
+	case *corev1.SecretList:
+		return int32(len((*t).Items)), nil
+	case *corev1.ConfigMapList:
+		return int32(len((*t).Items)), nil
+	case *corev1.ComponentStatusList:
+		return int32(len((*t).Items)), nil
+	case *rbacv1.RoleBindingList:
+		return int32(len((*t).Items)), nil
+	case *rbacv1.RoleList:
+		return int32(len((*t).Items)), nil
+	case *rbacv1.ClusterRoleBindingList:
+		return int32(len((*t).Items)), nil
+	case *rbacv1.ClusterRoleList:
+		return int32(len((*t).Items)), nil
 	case *unstructured.UnstructuredList:
 		return int32(len((*t).Items)), nil
 	case *unstructured.Unstructured:

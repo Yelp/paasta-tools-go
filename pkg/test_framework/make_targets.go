@@ -66,7 +66,7 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 	errScan := bufio.NewScanner(errPipe)
 
 	wg1 := sync.WaitGroup{}
-	wg1.Add(3)
+	wg1.Add(2)
 	go func() {
 		wg1.Done()
 		for outScan.Scan() {
@@ -89,14 +89,11 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 			os.Stderr.Write(line)
 		}
 	}()
-	go func() {
-		time.Sleep(time.Millisecond * 10)
-		wg1.Done()
-	}()
 
 	// We will lose the output of cmd if it is started before Scan() calls in the
 	// go routines above. So let's wait here until they are both scheduled, and
-	// at least 10ms, to give go scheduler enough time
+	// at least 50ms, to give the go scheduler enough time
+	time.Sleep(time.Millisecond * 50)
 	wg1.Wait()
 	err = cmd.Start()
 	if err != nil {
