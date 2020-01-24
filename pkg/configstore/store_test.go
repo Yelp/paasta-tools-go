@@ -2,6 +2,7 @@ package configstore
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 )
 
@@ -39,7 +40,7 @@ func unexpectedfileExists(test *testing.T) func(path string) (bool, error) {
 func TestStore_loadPath(test *testing.T) {
 	key := "test key"
 	s := &Store{
-		Data: map[string]interface{}{},
+		Data: sync.Map{},
 		ParseFile: func(file string, val interface{}) error {
 			v, ok := val.(map[string]interface{})
 			if !ok {
@@ -50,10 +51,10 @@ func TestStore_loadPath(test *testing.T) {
 		},
 	}
 	expected := "old value"
-	s.Data[key] = expected
+	s.Data.Store(key, expected)
 	s.loadPath("new value")
 
-	if actual, ok := s.Data[key]; ok {
+	if actual, ok := s.Data.Load(key); ok {
 		if actual != "new value" {
 			test.Fatalf("%+v was expected, got %+v", expected, actual)
 		}
@@ -65,7 +66,7 @@ func TestStore_loadPath(test *testing.T) {
 func TestStore_loadAll(test *testing.T) {
 	s := &Store{
 		Dir:  "zero",
-		Data: map[string]interface{}{},
+		Data: sync.Map{},
 		ParseFile: func(file string, val interface{}) error {
 			fmt.Printf("parse file called: %s\n", file)
 			v, ok := val.(map[string]interface{})
@@ -82,7 +83,7 @@ func TestStore_loadAll(test *testing.T) {
 	s.loadAll()
 
 	for _, key := range []string{"zero/one", "zero/two"} {
-		if actual, ok := s.Data[key]; ok {
+		if actual, ok := s.Data.Load(key); ok {
 			if actual != "loaded" {
 				test.Fatalf("%s wasn't loaded correctly", key)
 			}
@@ -95,7 +96,7 @@ func TestStore_loadAll(test *testing.T) {
 func TestStore_load(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      map[string]interface{}{},
+		Data:      sync.Map{},
 		ParseFile: func(file string, val interface{}) error { return nil },
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
@@ -117,7 +118,7 @@ func TestStore_load(test *testing.T) {
 func TestStore_Get(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      map[string]interface{}{},
+		Data:      sync.Map{},
 		ParseFile: unexpectedParseFile(test),
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
@@ -125,7 +126,7 @@ func TestStore_Get(test *testing.T) {
 			return true, nil
 		},
 	}
-	s.Data["one"] = "two"
+	s.Data.Store("one", "two")
 	val, err := s.Get("one")
 	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "two", val)

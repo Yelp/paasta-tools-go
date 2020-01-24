@@ -15,7 +15,7 @@ import (
 // Store holds config data
 type Store struct {
 	// If you care about sanity, never write here, just read
-	Data  map[string]interface{}
+	Data  sync.Map
 	Dir   string
 	Hints map[string]string
 	sync.Mutex
@@ -89,7 +89,7 @@ func (s *Store) loadPath(path string) error {
 	s.Lock()
 	defer s.Unlock()
 	for key, val := range value {
-		s.Data[key] = val
+		s.Data.Store(key, val)
 	}
 
 	return nil
@@ -139,17 +139,10 @@ func (s *Store) load(file string) error {
 	return s.loadAll()
 }
 
-func (s *Store) syncGet(key string) (interface{}, bool) {
-	s.Lock()
-	defer s.Unlock()
-	val, ok := s.Data[key]
-	return val, ok
-}
-
 // Get returns value for given `key`. If not found in `s.data`, call
 // `s.load` function with `file` from `s.hints` or `key` itself.
 func (s *Store) Get(key string) (interface{}, error) {
-	if val, ok := s.syncGet(key); ok {
+	if val, ok := s.Data.Load(key); ok {
 		return val, nil
 	}
 
@@ -161,7 +154,7 @@ func (s *Store) Get(key string) (interface{}, error) {
 	}
 	s.load(file)
 
-	val, ok := s.syncGet(key)
+	val, ok := s.Data.Load(key)
 	if !ok {
 		return nil, fmt.Errorf("key not found: %s", key)
 	}
