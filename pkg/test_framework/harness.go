@@ -246,6 +246,10 @@ func getReady(obj runtime.Object) (int32, error) {
 		return int32(len((*t).Items)), nil
 	case *batchv1.JobList:
 		return int32(len((*t).Items)), nil
+	case *corev1.PersistentVolumeList:
+		return int32(len((*t).Items)), nil
+	case *corev1.PersistentVolumeClaimList:
+		return int32(len((*t).Items)), nil
 	case *corev1.PodList:
 		return int32(len((*t).Items)), nil
 	case *corev1.ServiceList:
