@@ -154,6 +154,15 @@ func TestSetKubernetesObjectHash(t *testing.T) {
 	assert.NotEqual(t, someStatefulSet.Spec.Template.ObjectMeta.Labels["yelp.com/operator_config_hash"], "abc1234")
 	// but the existing labels are
 	assert.Equal(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/rick"], "andmortyadventures")
+
+	// Now let's try updating the object with a new hash
+	err = SetKubernetesObjectHash("def5678", someStatefulSet)
+	if err != nil {
+		t.Errorf("Failed to add label")
+	}
+	// the new hash and existing label are present in ObjectMeta
+	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"], "def5678")
+	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/rick"], "andmortyadventures")
 }
 
 func TestMultipleLevels(t *testing.T) {
