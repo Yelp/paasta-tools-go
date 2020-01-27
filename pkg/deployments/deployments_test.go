@@ -27,22 +27,6 @@ func (fakereader FakeRegistryReader) Read(content interface{}) error {
 	return nil
 }
 
-type StaticImageProvider struct {
-	DockerRegistry string
-	Image          string
-}
-
-func NewStaticImageProvider(dockerRegistry, image string) *StaticImageProvider {
-	return &StaticImageProvider{
-		DockerRegistry: dockerRegistry,
-		Image:          image,
-	}
-}
-
-func (provider StaticImageProvider) DockerImageURLForService(serviceName, deploymentGroup string) (string, error) {
-	return fmt.Sprintf("%s/%s", provider.DockerRegistry, provider.Image), nil
-}
-
 func TestDefaultProviderGetDeployment(test *testing.T) {
 	fakeDeployments := Deployments{
 		V2: V2DeploymentsConfig{
@@ -99,6 +83,64 @@ func TestMakeControlGroup(test *testing.T) {
 	actual := makeControlGroup("service", "instance", "cluster")
 	if expected != actual {
 		test.Errorf("Expected '%+v', got '%+v'", expected, actual)
+	}
+}
+
+func TestDockerImageURLForDeployGroup(test *testing.T) {
+	fakeDeployments := Deployments{
+		V2: V2DeploymentsConfig{
+			Deployments: map[string]V2DeploymentGroup{
+				"dev.every": V2DeploymentGroup{
+					DockerImage: "busybox:latest",
+					GitSHA:      "03d6f783c99695af0e716588abb9ba83ac957be2",
+				},
+				"test.every": V2DeploymentGroup{
+					DockerImage: "ubuntu:latest",
+					GitSHA:      "f3d6f783c99695af0e716588abb9ba83ac957be3",
+				},
+			},
+		},
+	}
+	registry := DockerRegistry{
+		Registry: "fakeregistry.yelp.com",
+	}
+	imageReader := &FakeDeploymentsReader{data: fakeDeployments}
+	registryReader := &FakeRegistryReader{registry: registry}
+	imageProvider := DefaultImageProvider{
+		RegistryURLReader: registryReader,
+		ImageReader:       imageReader,
+	}
+	actual, err := imageProvider.DockerImageURLForDeployGroup("dev.every")
+	if err != nil {
+		test.Errorf("Failed to imageProvider.DockerImageURLForDeployGroup")
+	}
+	expected := "fakeregistry.yelp.com/busybox:latest"
+	if actual != expected {
+		test.Errorf("Expected '%+v', got '%+v'", expected, actual)
+	}
+}
+
+func TestGetPaastaGitShaFromDockerURL(test *testing.T) {
+	expected := "gitabc12345"
+	actual, err := GetPaastaGitShaFromDockerURL("docker.thing/paasta-abc12345abcabcabacbacbacb")
+	if err != nil {
+		test.Errorf("Failed to GetPaastaGitShaFromDockerURL: %s", err)
+	}
+	if actual != expected {
+		test.Errorf("Expected '%+v', got '%+v'", expected, actual)
+	}
+
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
+	}
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing/abc12345abcabcabacbacbacb")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
+	}
+	actual, err = GetPaastaGitShaFromDockerURL("docker.thing/paasta-abc12")
+	if err == nil {
+		test.Errorf("Expected failure for invalid docker URL")
 	}
 }
 
