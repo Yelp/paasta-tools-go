@@ -52,9 +52,7 @@ func ComputeHashForKubernetesObject(object interface{}) (string, error) {
 }
 
 func SetKubernetesObjectHash(configHash string, object interface{}) error {
-	labelsToAdd := map[string]string{
-		"yelp.com/operator_config_hash": configHash,
-	}
+	labelsToAdd := map[string]string{}
 	value := reflect.ValueOf(object)
 	var objectMeta reflect.Value
 	if value.Kind() == reflect.Ptr {
@@ -69,6 +67,8 @@ func SetKubernetesObjectHash(configHash string, object interface{}) error {
 				v := labels.MapIndex(k)
 				labelsToAdd[k.Interface().(string)] = v.Interface().(string)
 			}
+			// Set the configHash label last, so that any prior configHash label is overwritten with the new one
+			labelsToAdd["yelp.com/operator_config_hash"] = configHash
 			labels.Set(reflect.ValueOf(labelsToAdd))
 		}
 	}
