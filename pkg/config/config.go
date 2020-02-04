@@ -1,11 +1,11 @@
 package config
 
 import (
-	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
+
+	yaml "k8s.io/apimachinery/pkg/util/yaml"
 )
 
 type ConfigReader interface {
@@ -18,12 +18,8 @@ type ConfigFileReader struct {
 }
 
 func ParseContent(reader io.Reader, content interface{}) error {
-	buf, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(buf, content)
-	return err
+	decoder := yaml.NewYAMLToJSONDecoder(reader)
+	return decoder.Decode(content)
 }
 
 func (configReader ConfigFileReader) FileNameForConfig() string {
