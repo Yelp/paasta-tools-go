@@ -121,6 +121,7 @@ echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
 echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -158,6 +159,7 @@ func TestCheckNoCleanup(t *testing.T) {
 echo "fail-close-cluster-start \$\{RND\}"
 echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -180,14 +182,15 @@ echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
 echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 `
+	err := kube.Close()
+	assert.NoError(t, err)
 	cmp += fmt.Sprintf(`export RND=%s
 tests-cluster-stop %s
 tests-cluster-start %s
 tests-cluster-stop %s
 $`, rnd, rnd, rnd, rnd)
-	err := kube.Close()
-	assert.NoError(t, err)
 	assert.Regexp(t, cmp, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -212,12 +215,13 @@ func TestStartNoCleanup(t *testing.T) {
 echo "fail-close-cluster-start \$\{RND\}"
 echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
 `
+	err := kube.Close()
+	assert.NoError(t, err)
 	cmp += fmt.Sprintf(`export RND=%s
 fail-close-cluster-start %s
 $`, rnd, rnd)
-	err := kube.Close()
-	assert.NoError(t, err)
 	assert.Regexp(t, cmp, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
