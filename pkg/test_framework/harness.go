@@ -357,6 +357,7 @@ func checkMakefile(options Options, sinks Sinks) {
 	}
 	check(options.operatorStart())
 	check(options.operatorStop())
+	check(options.cleanup())
 }
 
 type envScanner struct {

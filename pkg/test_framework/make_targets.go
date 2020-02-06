@@ -15,6 +15,7 @@ const (
 	targetClusterStop   = "cluster-stop"
 	targetOperatorStart = "operator-start"
 	targetOperatorStop  = "operator-stop"
+	targetCleanup       = "cleanup"
 )
 
 func (o Options) env() string {
@@ -35,6 +36,10 @@ func (o Options) operatorStart() string {
 
 func (o Options) operatorStop() string {
 	return o.Prefix + targetOperatorStop
+}
+
+func (o Options) cleanup() string {
+	return o.Prefix + targetCleanup
 }
 
 // This interface is used to handle the process after it's been started

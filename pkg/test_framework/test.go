@@ -20,7 +20,11 @@ type Test struct {
 }
 
 func (t *Test) Setup() *Test {
-	_ = t.Test.Setup()
+	// this bit of defensive programming is to aid unit testing
+	if t.harness.Harness.KubeClient() != nil {
+		_ = t.Test.Setup()
+	}
+	_ = os.Setenv("TEST_OPERATOR_NS", t.Namespace)
 	return t
 }
 
@@ -28,7 +32,7 @@ func (t *Test) StartOperator() error {
 	if t.operatorRunning == true {
 		return fmt.Errorf("operator already started")
 	}
-	err := startOperator(t.Namespace, t.harness.Options, t.harness.Sinks)
+	err := startOperator(t.harness.Options, t.harness.Sinks)
 	if err == nil {
 		t.operatorRunning = true
 	}
@@ -49,11 +53,15 @@ func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 
 func (t *Test) Close() {
 	// If panicking, let Test.Close() do its thing only and keep the operator running
-	defer t.Test.Close()
+	defer func () {
+		_ = os.Unsetenv("TEST_OPERATOR_NS")
+		t.Test.Close()
+	}()
 	if r := recover(); r != nil {
 		panic(r)
 	} else {
 		t.StopOperator()
+		cleanup(t.harness.Options, t.harness.Sinks)
 	}
 }
 
@@ -130,20 +138,15 @@ func(h* asynchronousHandler) Handle(cmd *exec.Cmd) {
 	}
 }
 
-func startOperator(namespace string, options Options, sinks Sinks) error {
+func startOperator(options Options, sinks Sinks) error {
 	makefile := options.Makefile
 	makedir := options.MakeDir
-	_ = os.Setenv("TEST_OPERATOR_NS", namespace)
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
 	handler := asynchronousHandler{options.OperatorStartDelay, nil}
 	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
-		_ = os.Unsetenv("TEST_OPERATOR_NS")
 		return err
-	}
-	if handler.result != nil {
-		_ = os.Unsetenv("TEST_OPERATOR_NS")
 	}
 	return handler.result
 }
@@ -153,7 +156,21 @@ func stopOperator(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
+	// allow for errors here
 	_ = run(sinks.Stdout, sinks.Stderr, args)
-	_ = os.Unsetenv("TEST_OPERATOR_NS")
+	log.Print("... done")
+}
+
+func cleanup(options Options, sinks Sinks) {
+	if options.NoCleanup {
+		log.Printf("Keeping the test objects")
+		return
+	}
+	makefile := options.Makefile
+	makedir := options.MakeDir
+	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.cleanup()}
+	log.Printf("Running %v ...", args)
+	// allow for errors here
+	_ = run(sinks.Stdout, sinks.Stderr, args)
 	log.Print("... done")
 }
