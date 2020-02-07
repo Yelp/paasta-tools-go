@@ -14,6 +14,9 @@ test-sleep05-operator-start:
 %-operator-stop:
 	@echo "$*-operator-stop $${RND} $${TEST_OPERATOR_NS}"
 
+%-cleanup:
+	@echo "$*-cleanup $${RND} $${TEST_OPERATOR_NS}"
+
 %-env:
 	@echo "export RND=$$(xxd -l8 -p /dev/random)"
 
