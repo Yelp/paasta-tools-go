@@ -95,11 +95,11 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 		}
 	}()
 
+	wg1.Wait()
 	// We will lose the output of cmd if it is started before Scan() calls in the
 	// go routines above. So let's wait here until they are both scheduled, and
 	// at least 50ms, to give the go scheduler enough time
 	time.Sleep(time.Millisecond * 50)
-	wg1.Wait()
 	err = cmd.Start()
 	if err != nil {
 		return err
