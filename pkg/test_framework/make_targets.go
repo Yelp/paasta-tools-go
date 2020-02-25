@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"sync"
-	"time"
 )
 
 const (
@@ -43,9 +42,11 @@ func (o Options) cleanup() string {
 }
 
 // This interface is used to handle the process after it's been started
-// e.g. wait for the result etc.
+// It is expected to call *FIRST* wg.Wait() and *THEN* cmd.Wait()
+// This helps to ensure that the output scanners will read the full output
+// before the pipes are closed inside cmd.Wait()
 type Handler interface {
-	Handle(cmd *exec.Cmd)
+	Handle(cmd *exec.Cmd, wg *sync.WaitGroup)
 }
 
 // General purpose wrapper for "exec.Command().Start()". It can be used to:
@@ -73,7 +74,6 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 	wg1 := sync.WaitGroup{}
 	wg1.Add(2)
 	go func() {
-		wg1.Done()
 		for outScan.Scan() {
 			// we need our delimiter back!
 			line := append(outScan.Bytes(), '\n')
@@ -82,9 +82,9 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 			}
 			os.Stdout.Write(line)
 		}
+		wg1.Done()
 	}()
 	go func() {
-		wg1.Done()
 		for errScan.Scan() {
 			// we need our delimiter back!
 			line := append(errScan.Bytes(), '\n')
@@ -93,13 +93,9 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 			}
 			os.Stderr.Write(line)
 		}
+		wg1.Done()
 	}()
 
-	wg1.Wait()
-	// We will lose the output of cmd if it is started before Scan() calls in the
-	// go routines above. So let's wait here until they are both scheduled, and
-	// at least 50ms, to give the go scheduler enough time
-	time.Sleep(time.Millisecond * 50)
 	err = cmd.Start()
 	if err != nil {
 		return err
@@ -109,7 +105,7 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 	wg2 := sync.WaitGroup{}
 	wg2.Add(1)
 	go func() {
-		handler.Handle(cmd)
+		handler.Handle(cmd, &wg1)
 		wg2.Done()
 	}()
 
@@ -120,7 +116,8 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 type blockingHandler struct {
 	result error
 }
-func(h *blockingHandler) Handle(cmd *exec.Cmd) {
+func(h *blockingHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
+	wg.Wait()
 	h.result = cmd.Wait()
 }
 
