@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -17,6 +18,91 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
+
+func ReadValue(obj *unstructured.Unstructured, path ...string) (interface{}, error) {
+	if len(path) == 0 {
+		return nil, fmt.Errorf("empty path")
+	}
+	errpath := ""
+	errjson, _ := obj.MarshalJSON()
+	section := obj.UnstructuredContent()
+	for i, v := range path {
+		errpath += "[" + v + "]"
+
+		if i+1 == len(path) {
+			result, ok := section[v]
+			if !ok {
+				return nil, fmt.Errorf("could not find value %s in:\n%s", errpath, string(errjson))
+			} else {
+				return result, nil
+			}
+		} else {
+			tmp, ok := section[v]
+			if !ok {
+				return nil, fmt.Errorf("could not find section %s in:\n%s", errpath, string(errjson))
+			}
+			section, ok = tmp.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("found %s value, but section was expected in:\n%s", errpath, string(errjson))
+			}
+		}
+	}
+	panic("Unreachable code in ReadValue")
+}
+
+func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...string) error {
+	if len(path) == 0 {
+		return fmt.Errorf("empty path")
+	}
+	errpath := ""
+	errjson, _ := obj.MarshalJSON()
+	section := obj.UnstructuredContent()
+	for i, v := range path {
+		errpath += "[" + v + "]"
+
+		if i+1 == len(path) {
+			section[v] = value
+			return nil
+		} else {
+			tmp, ok := section[v]
+			if !ok {
+				return fmt.Errorf("could not find section %s in:\n%s", errpath, string(errjson))
+			}
+			section, ok = tmp.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("found %s value, but section was expected in:\n%s", errpath, string(errjson))
+			}
+		}
+	}
+	panic("Unreachable code in WriteValue")
+}
+
+func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
+	if len(path) == 0 {
+		return fmt.Errorf("empty path")
+	}
+	errpath := ""
+	errjson, _ := obj.MarshalJSON()
+	section := obj.UnstructuredContent()
+	for i, v := range path {
+		errpath += "[" + v + "]"
+
+		if i+1 == len(path) {
+			delete(section, v)
+			return nil
+		} else {
+			tmp, ok := section[v]
+			if !ok {
+				return fmt.Errorf("could not find section %s in:\n%s", errpath, string(errjson))
+			}
+			section, ok = tmp.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("found %s value, but section was expected in:\n%s", errpath, string(errjson))
+			}
+		}
+	}
+	panic("Unreachable code in DeleteValue")
+}
 
 func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 	reader, _, isJson := yaml.GuessJSONStream(r, bytes.MinRead)
