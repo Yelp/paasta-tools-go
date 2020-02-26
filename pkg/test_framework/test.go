@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -107,9 +108,10 @@ type asynchronousHandler struct {
 // when operatorStartDelay has elapsed.
 // If we have received anything on the channel (before it closed), it means that
 // the program completed; otherwise we consider it running.
-func(h* asynchronousHandler) Handle(cmd *exec.Cmd) {
+func(h* asynchronousHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
 	channel := newChanError()
 	go func() {
+		wg.Wait()
 		err := cmd.Wait()
 		// will only succeed to send an error if completed before operatorStartDelay
 		channel.send(err)
