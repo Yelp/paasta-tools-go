@@ -3,50 +3,24 @@ package hashing
 import (
 	"encoding/json"
 	"fmt"
+	utils "github.com/Yelp/paasta-tools-go/pkg/utils"
 	"hash/fnv"
 	"k8s.io/apimachinery/pkg/util/rand"
 	"reflect"
 )
 
 func ComputeHashForKubernetesObject(object interface{}) (string, error) {
-	// By marshaling/unmarshaling the object via JSON we're copying it into a
-	// map, which is easier to manipulate in generic way than structs.
-	if b, err := json.Marshal(object); err != nil {
-		return "", fmt.Errorf("Error while encoding %+v into JSON: %s", object, err)
+	if m, err := utils.GetHashObjectOfKubernetes(object); err != nil {
+		return "", err
 	} else {
-		var v map[string]interface{}
-		if err := json.Unmarshal(b, &v); err != nil {
-			return "", fmt.Errorf("Error while decoding JSON %s into an object: %s", v, err)
+		// By using serialized JSON for hashing we're making the hashing process
+		// a bit easier (like having maps always being sorted by keys).
+		if b, err := json.Marshal(m); err != nil {
+			return "", fmt.Errorf("Error while encoding %+v into JSON: %s", m, err)
 		} else {
-			// We need only kind/version/spec and labels excluding the label with the
-			// current hash value while calculating the hash.  Also Kubernetes adds
-			// its own info into `metadata` which we need to ignore.
-			meta := v["metadata"].(map[string]interface{})
-			labels := meta["labels"]
-			if labels != nil {
-				delete(labels.(map[string]interface{}), "yelp.com/operator_config_hash")
-			} else {
-				labels = make(map[string]interface{})
-			}
-			m := map[string]interface{}{
-				"kind":       v["kind"],
-				"apiVersion": v["apiVersion"],
-				"spec":       v["spec"],
-				"metadata": map[string]interface{}{
-					"name":      meta["name"],
-					"namespace": meta["namespace"],
-					"labels":    labels,
-				},
-			}
-			// By using serialized JSON for hashing we're making the hashing process
-			// a bit easier (like having maps always being sorted by keys).
-			if b, err := json.Marshal(m); err != nil {
-				return "", fmt.Errorf("Error while encoding %+v into JSON: %s", m, err)
-			} else {
-				hasher := fnv.New32a()
-				hasher.Write(b)
-				return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
-			}
+			hasher := fnv.New32a()
+			hasher.Write(b)
+			return rand.SafeEncodeString(fmt.Sprint(hasher.Sum32())), nil
 		}
 	}
 }
