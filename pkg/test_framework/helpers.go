@@ -87,8 +87,8 @@ func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...strin
 
 // Delete an element (value or section) from the unstructured object, given a path
 // consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
-// an error if nesting element is not found or is not a section. There is no error
-// if the element being deleted does not exist, because that would be a no-op anyway.
+// an error if nesting element is not a section. There is no error if the element
+// being deleted does not exist, because that would be a no-op anyway.
 // By "section" I mean map[string]interface{} i.e. map capable of nesting elements
 func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 	if len(path) == 0 {
@@ -101,12 +101,14 @@ func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 		errpath += "[" + v + "]"
 
 		if i+1 == len(path) {
+			// Note: delete is a no-op if v is not in section
 			delete(section, v)
 			return nil
 		} else {
 			tmp, ok := section[v]
 			if !ok {
-				return fmt.Errorf("could not find section %s in:\n%s", errpath, string(errjson))
+				// The element we wanted to delete does not exist, so no-op
+				return nil
 			}
 			section, ok = tmp.(map[string]interface{})
 			if !ok {
