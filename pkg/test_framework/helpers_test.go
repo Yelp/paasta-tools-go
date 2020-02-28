@@ -170,3 +170,113 @@ func TestLoadService(t *testing.T) {
 	json2, _ := obj1.MarshalJSON()
 	assert.Equal(t, fizzbuzzSrvMini, string(json2))
 }
+
+func TestReadWriteDeleteValue(t *testing.T) {
+	reader := bytes.NewReader([]byte(fizzbuzzSrvYaml))
+	service := &unstructured.Unstructured{}
+	err := LoadInto(reader, service)
+	assert.NoError(t, err)
+
+	label, err := ReadValue(service, "metadata", "labels", "buzz.hello")
+	assert.NoError(t, err)
+	assert.Equal(t, "world", label)
+
+	// Read a value nested under value
+	_, err = ReadValue(service, "metadata", "labels", "buzz.hello", "dummy")
+	assert.NotNil(t, err)
+
+	// Read non-existing value
+	_, err = ReadValue(service, "metadata", "labels", "dummy")
+	assert.NotNil(t, err)
+
+	// Read a value under non-existing section
+	_, err = ReadValue(service, "metadata", "annotations", "dummy")
+	assert.NotNil(t, err)
+
+	// Delete non-existing section - not an error
+	err = DeleteValue(service, "metadata", "annotations", "dummy")
+	assert.NoError(t, err)
+
+	// Delete non-existing value - not an error
+	err = DeleteValue(service, "metadata", "labels", "dummy")
+	assert.NoError(t, err)
+
+	// Write a value
+	err = WriteValue(service, "value", "metadata", "labels", "dummy")
+	assert.NoError(t, err)
+
+	// Check it is there
+	tmp, err := ReadValue(service, "metadata", "labels", "dummy")
+	assert.NoError(t, err)
+	assert.Equal(t, "value", tmp)
+
+	// Overwrite a value
+	err = WriteValue(service, "bar", "metadata", "labels", "dummy")
+	assert.NoError(t, err)
+
+	// Read whole section
+	labels, err := ReadValue(service, "metadata", "labels")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"buzz.hello": "world",
+		"dummy": "bar",
+	}, labels)
+
+	// Delete dummy value now
+	err = DeleteValue(service, "metadata", "labels", "dummy")
+	assert.NoError(t, err)
+
+	// Read whole section again
+	labels, err = ReadValue(service, "metadata", "labels")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"buzz.hello": "world",
+	}, labels)
+
+	// Delete whole section
+	err = DeleteValue(service, "metadata", "labels")
+	assert.NoError(t, err)
+
+	// Read non-existing section
+	labels, err = ReadValue(service, "metadata", "labels")
+	assert.NotNil(t, err)
+
+	// Write whole section
+	labels = map[string]interface{} {
+		"fizz.hello": "there",
+	}
+	err = WriteValue(service, labels, "metadata", "labels")
+	assert.NoError(t, err)
+
+	// Read whole section again
+	labels, err = ReadValue(service, "metadata", "labels")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"fizz.hello": "there",
+	}, labels)
+
+	// Read complex value
+	ports, err := ReadValue(service, "spec", "ports")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"name": "rest",
+		"port": int64(8080),
+		"protocol": "TCP",
+		"targetPort": int64(8080),
+	}, ports.([]interface{})[0])
+
+	// Write complex value
+	ports.([]interface{})[0].(map[string]interface{})["name"] = "blob"
+	err = WriteValue(service, ports, "spec", "ports")
+	assert.NoError(t, err)
+
+	// Verify the new value
+	ports, err = ReadValue(service, "spec", "ports")
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{
+		"name": "blob",
+		"port": int64(8080),
+		"protocol": "TCP",
+		"targetPort": int64(8080),
+	}, ports.([]interface{})[0])
+}
