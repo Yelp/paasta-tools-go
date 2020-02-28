@@ -19,6 +19,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
+// Read an element (value or section) from the unstructured object, given a path
+// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
+// an error if element is not found or if a nesting element is not a section
+// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
 func ReadValue(obj *unstructured.Unstructured, path ...string) (interface{}, error) {
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
@@ -50,6 +54,10 @@ func ReadValue(obj *unstructured.Unstructured, path ...string) (interface{}, err
 	panic("Unreachable code in ReadValue")
 }
 
+// Write an element (value or section) from the unstructured object, given a path
+// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
+// an error if nesting element is not found or is not a section
+// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
 func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
@@ -77,6 +85,11 @@ func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...strin
 	panic("Unreachable code in WriteValue")
 }
 
+// Delete an element (value or section) from the unstructured object, given a path
+// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
+// an error if nesting element is not found or is not a section. There is no error
+// if the element being deleted does not exist, because that would be a no-op anyway.
+// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
 func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
@@ -104,6 +117,10 @@ func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 	panic("Unreachable code in DeleteValue")
 }
 
+// Load an Unstructured object from the textual data, either in JSON or YAML format
+// using standard Reader interface (i.e. could be a file, hardcoded text, something else).
+// Note: Unstructured object supports conversion to UnstructuredList for any object
+// which contains "items" directly under the root
 func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 	reader, _, isJson := yaml.GuessJSONStream(r, bytes.MinRead)
 	data, err := ioutil.ReadAll(reader)
@@ -123,6 +140,8 @@ func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 	return &result, err
 }
 
+// Load either strongly typed k8s object, or Unstructured object, from textual data
+// either in JSON or YAML format.
 func LoadInto(r io.Reader, into interface{}) error {
 	if err := yaml.NewYAMLOrJSONDecoder(r, bytes.MinRead).Decode(into); err != nil {
 		return err
@@ -132,11 +151,19 @@ func LoadInto(r io.Reader, into interface{}) error {
 
 type WaitSource func()(runtime.Object, error)
 
+// Wait until WaitSource returns 0 elements or NotFound error - useful for waiting until
+// something is deleted
 func WaitForNone(timeout time.Duration, from WaitSource) error {
 	none := int32(0)
 	return WaitFor(&none, timeout, from)
 }
 
+// Wait until WaitSource returns a given number of instances. In the context of strongly
+// typed non-List k8s objects this typically means number of ready pods; for List objects
+// (including UnstructuredList) this means number of items; for Unstructured object
+// this means hardcoded 1. For details, refer to getReady function.
+// We use a pointer int32 to allow the use of ...Spec.Replicas; for the same reason we
+// fallback to hardcoded 1 if nil is provided
 func WaitFor(reps* int32, timeout time.Duration, from WaitSource) error {
 	wanted := int32(1)
 	if reps != nil {
