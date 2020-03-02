@@ -43,7 +43,7 @@ func generateYamlDiff(yaml1 string, yaml2 string, context int) string {
 
 // func to generate yaml diff of objects used for hashing
 // context : number of context lines to use for generating diff
-// for more reference on context : https://github.com/pmezard/go-difflib/blob/5d4384ee4fb2527b0a1256a821ebfc92f91efefc/difflib/difflib.go#L559
+// for more reference on context : https://www.gnu.org/software/diffutils/manual/html_node/Unified-Format.html#Unified-Format
 func GetYamlDiffForObjects(objectOld interface{}, objectNew interface{}, context int) (string, error) {
 	yamlOld, err := getYamlOfObject(objectOld)
 	if err != nil {
