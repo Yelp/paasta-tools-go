@@ -14,7 +14,6 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
@@ -151,22 +150,22 @@ func LoadInto(r io.Reader, into interface{}) error {
 	return nil
 }
 
-type WaitSource func()(runtime.Object, error)
+type WaitForFn func()(interface{}, error)
 
 // Wait until WaitSource returns 0 elements or NotFound error - useful for waiting until
 // something is deleted
-func WaitForNone(timeout time.Duration, from WaitSource) error {
+func WaitForNone(timeout time.Duration, from WaitForFn) error {
 	none := int32(0)
 	return WaitFor(&none, timeout, from)
 }
 
-// Wait until WaitSource returns a given number of instances. In the context of strongly
+// Wait until from returns a given number of instances. In the context of strongly
 // typed non-List k8s objects this typically means number of ready pods; for List objects
 // (including UnstructuredList) this means number of items; for Unstructured object
 // this means hardcoded 1. For details, refer to getReady function.
 // We use a pointer int32 to allow the use of ...Spec.Replicas; for the same reason we
 // fallback to hardcoded 1 if nil is provided
-func WaitFor(reps* int32, timeout time.Duration, from WaitSource) error {
+func WaitFor(reps* int32, timeout time.Duration, from WaitForFn) error {
 	wanted := int32(1)
 	if reps != nil {
 		wanted = *reps
@@ -193,8 +192,7 @@ func WaitFor(reps* int32, timeout time.Duration, from WaitSource) error {
 	})
 }
 
-
-func getReady(obj runtime.Object) (int32, error) {
+func getReady(obj interface{}) (int32, error) {
 	switch t := obj.(type) {
 	case *appsv1.StatefulSet:
 		return (*t).Status.ReadyReplicas, nil
@@ -262,8 +260,14 @@ func getReady(obj runtime.Object) (int32, error) {
 			log.Panic(err)
 		}
 		return int32(len(list.Items)), nil
+	case int64:
+		return int32(t), nil
+	case int32:
+		return t, nil
+	case int:
+		return int32(t),nil
 	default:
-		log.Panicf("Unsupported type %v", t.GetObjectKind())
+		log.Panicf("Unsupported type %t", obj)
 	}
 	return 0, nil
 }
