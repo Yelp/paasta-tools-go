@@ -69,7 +69,9 @@ func TestGetYamlDiffForObjects(t *testing.T) {
 	}
 	expectedDiff := `--- Old
 +++ New
-@@ -5,5 +5,5 @@
+@@ -3,9 +3,9 @@
+ metadata:
+   creationTimestamp: null
    labels:
 -    yelp.com/operator_config_hash: somerandomhash1
 -    yelp.com/rick: andmortyadventures1
@@ -78,12 +80,18 @@ func TestGetYamlDiffForObjects(t *testing.T) {
 +    yelp.com/rick: andmortyadventures2
 +  name: morty-test-cluster2
    namespace: paasta-cassandra
-@@ -18,2 +18,4 @@
+ spec:
+   replicas: 2
+@@ -16,6 +16,8 @@
+       creationTimestamp: null
+     spec:
        containers: []
 +      volumes:
 +      - name: volume1
    updateStrategy: {}
+   volumeClaimTemplates:
+   - metadata:
 `
-	actualDiff, _ := GetYamlDiffForObjects(someStatefulSet1, someStatefulSet2)
+	actualDiff, _ := GetYamlDiffForObjects(someStatefulSet1, someStatefulSet2, 3)
 	assert.Equal(t, expectedDiff, actualDiff)
 }

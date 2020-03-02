@@ -28,7 +28,7 @@ func getYamlOfObject(object interface{}) (string, error) {
 	}
 }
 
-func generateYamlDiff(yaml1 string, yaml2 string) string {
+func generateYamlDiff(yaml1 string, yaml2 string, context int) string {
 	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
 		A:        difflib.SplitLines(yaml1),
 		B:        difflib.SplitLines(yaml2),
@@ -36,13 +36,15 @@ func generateYamlDiff(yaml1 string, yaml2 string) string {
 		FromDate: "",
 		ToFile:   "New",
 		ToDate:   "",
-		Context:  1,
+		Context:  context,
 	})
 	return diff
 }
 
 // func to generate yaml diff of objects used for hashing
-func GetYamlDiffForObjects(objectOld interface{}, objectNew interface{}) (string, error) {
+// context : number of context lines to use for generating diff
+// for more reference on context : https://github.com/pmezard/go-difflib/blob/5d4384ee4fb2527b0a1256a821ebfc92f91efefc/difflib/difflib.go#L559
+func GetYamlDiffForObjects(objectOld interface{}, objectNew interface{}, context int) (string, error) {
 	yamlOld, err := getYamlOfObject(objectOld)
 	if err != nil {
 		return "", err
@@ -51,5 +53,5 @@ func GetYamlDiffForObjects(objectOld interface{}, objectNew interface{}) (string
 	if err != nil {
 		return "", err
 	}
-	return generateYamlDiff(yamlOld, yamlNew), nil
+	return generateYamlDiff(yamlOld, yamlNew, context), nil
 }
