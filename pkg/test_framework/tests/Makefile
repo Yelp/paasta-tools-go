@@ -1,8 +1,3 @@
-export KUBECONFIG
-export CLUSTER
-export CIDFILE
-export K3DIMAGE
-
 itest-env:
 	echo "export KUBECONFIG=$(shell mktemp /tmp/kube_XXXX.yaml)"
 	echo "export CLUSTER=itest-$(shell xxd -p -l4 /dev/urandom)"
@@ -12,26 +7,21 @@ itest-env:
 itest-cluster-start:
 	docker build -t $${K3DIMAGE} .
 	rm -f $${CIDFILE}
-	docker container run -d --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
+	docker container run -d --init --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'python3 port_reserve.py > port.txt && rm port_reserve.py'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d delete --name $${CLUSTER} &>/dev/null || echo -n'
-	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d create --name $${CLUSTER} --api-port $$(cat port.txt) && rm port.txt'
+	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d create --name $${CLUSTER} --api-port $$(cat port.txt) --wait 30 && rm port.txt'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d start --name $${CLUSTER}'
-	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'until k3d get-kubeconfig --name $${CLUSTER} &>/dev/null; do sleep 0.5s; done'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'cat $$(k3d get-kubeconfig --name $${CLUSTER})' > $${KUBECONFIG}
+	echo "Using KUBECONFIG=$${KUBECONFIG}, API $$(grep -Eo 'server: http.*$$' $${KUBECONFIG})"
 
 itest-cluster-stop:
-	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d delete --all' || echo -n
-	docker container rm -f $$(cat $${CIDFILE}) &>/dev/null || echo -n
-
-itest-operator-start:
-	echo "operator-start $${KUBECONFIG} $${TEST_OPERATOR_NS}"
-
-itest-operator-stop:
-	echo "operator-stop $${KUBECONFIG} $${TEST_OPERATOR_NS}"
-
-itest-cleanup:
-	echo "cleanup $${KUBECONFIG} $${TEST_OPERATOR_NS}"
+	if [ -n "$${CIDFILE}" ] && [ -s "$${CIDFILE}" ]; then \
+	  docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d delete --all'; \
+	  docker container stop $$(cat $${CIDFILE}) >/dev/null 2>&1; \
+	  docker container rm $$(cat $${CIDFILE}) >/dev/null 2>&1; \
+	  rm $${CIDFILE}; \
+	fi
 
 fail:
 	$(error $*)
