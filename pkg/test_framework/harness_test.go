@@ -96,16 +96,25 @@ func TestRunSimple(t *testing.T) {
 	assert.Empty(t, cerr.String())
 }
 
-func newOptions() *Options {
+func newOptions(args ... string) *Options {
+	prefix := "tests"
+	if len(args) >= 1 {
+		prefix = args[0]
+	}
+	nocleanup := false
+	if len(args) >= 2 {
+		nocleanup = args[1] == "nocleanup"
+	}
+
 	return &Options{
 		Options: harness.Options{
 			ManifestDirectory: "",
-			NoCleanup:         false,
+			NoCleanup:         nocleanup,
 			Logger:            &logger.PrintfLogger{},
 		},
 		Makefile: "Makefile",
 		MakeDir:  sanitizeMakeDir("tests"),
-		Prefix:   sanitizePrefix("tests"),
+		Prefix:   sanitizePrefix(prefix),
 	}
 }
 
@@ -128,9 +137,8 @@ $`, cout.String())
 }
 
 func TestCheckFail(t *testing.T) {
-	options := *newOptions()
 	// expect fail-close-cluster-stop to fail, not skipped
-	options.Prefix = "fail-close-"
+	options := *newOptions("fail-close")
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -146,10 +154,8 @@ $`, cout.String())
 }
 
 func TestCheckNoCleanup(t *testing.T) {
-	options := *newOptions()
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options.Prefix = "fail-close-"
-	options.NoCleanup = true
+	options := *newOptions("fail-close", "nocleanup")
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -197,10 +203,8 @@ $`, rnd, rnd, rnd, rnd)
 }
 
 func TestStartNoCleanup(t *testing.T) {
-	options := *newOptions()
-	options.NoCleanup = true
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options.Prefix = "fail-close-"
+	options := *newOptions("fail-close", "nocleanup")
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
