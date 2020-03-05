@@ -1,13 +1,9 @@
-FROM ubuntu:18.04
+FROM python:3.7-alpine
 
 ENV VER_K3D=v1.6.0
 ENV VER_PORT=v1.1.1
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk --no-cache add ca-certificates bash curl
 
 RUN curl -sL https://raw.githubusercontent.com/rancher/k3d/$VER_K3D/install.sh \
     -o k3d_install.sh \
