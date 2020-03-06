@@ -107,7 +107,7 @@ func Parse() *Options {
 	return &options
 }
 
-func Start(m *testing.M, options Options, sinks Sinks) {
+func Start(options Options, sinks Sinks) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
