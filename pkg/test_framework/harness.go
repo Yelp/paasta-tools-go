@@ -24,7 +24,7 @@ type Harness struct {
 	harness.Harness
 	Options Options
 	Sinks   Sinks
-	client  client.Client
+	Client  client.Client
 }
 
 func (h *Harness) Close() error {
@@ -55,13 +55,6 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 	}
 
 	return f, nil
-}
-
-func (h *Harness) Client() client.Client {
-	if h.client == nil {
-		log.Panicf("k8s client not initialised")
-	}
-	return h.client
 }
 
 type Options struct {
@@ -121,7 +114,7 @@ func Start(m *testing.M, options Options, sinks Sinks) {
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
 	Kube = startHarness(options, sinks)
-	Kube.client = newClient()
+	Kube.Client = newClient()
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -188,7 +181,7 @@ func startHarness(options Options, sinks Sinks) *Harness {
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
-		client:  nil,
+		Client:  nil,
 	}
 }
 
