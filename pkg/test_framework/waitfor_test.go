@@ -17,7 +17,7 @@ func TestWaitFor_Basic(t *testing.T) {
 		return
 	}
 	options := *newOptions("itest")
-	Start(nil, options, Sinks{})
+	Start(options)
 	defer Kube.Close()
 
 	// See if the kubernetes service is available
@@ -26,7 +26,7 @@ func TestWaitFor_Basic(t *testing.T) {
 		time.Minute,
 		func()(interface{}, error) {
 			res := &corev1.ServiceList{}
-			err := Kube.client.List(
+			err := Kube.Client.List(
 				context.TODO(),
 				&client.ListOptions{Namespace: "default"},
 				res,
