@@ -179,7 +179,7 @@ func TestStart(t *testing.T) {
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
-	kube := startHarness(options, sinks)
+	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)
@@ -211,7 +211,7 @@ func TestStartNoCleanup(t *testing.T) {
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
-	kube := startHarness(options, sinks)
+	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)

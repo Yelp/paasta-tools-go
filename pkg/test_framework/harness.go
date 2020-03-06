@@ -15,6 +15,7 @@ import (
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
 	"github.com/subosito/gotenv"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,7 +25,8 @@ type Harness struct {
 	harness.Harness
 	Options Options
 	Sinks   Sinks
-	client  client.Client
+	Scheme  *runtime.Scheme
+	Client  client.Client
 }
 
 func (h *Harness) Close() error {
@@ -55,13 +57,6 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 	}
 
 	return f, nil
-}
-
-func (h *Harness) Client() client.Client {
-	if h.client == nil {
-		log.Panicf("k8s client not initialised")
-	}
-	return h.client
 }
 
 type Options struct {
@@ -114,14 +109,32 @@ func Parse() *Options {
 	return &options
 }
 
-func Start(m *testing.M, options Options, sinks Sinks) {
+// We have a fair number of optional parameters here, let's use poor man's default
+func Start(options Options, args ... interface{}) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
-	Kube = startHarness(options, sinks)
-	Kube.client = newClient()
+	sinks := Sinks{}
+	var scheme *runtime.Scheme = nil
+	for _, v := range(args) {
+		switch t := v.(type) {
+		case Sinks:
+			sinks = t
+		case *Sinks:
+			sinks = *t
+		case runtime.Scheme:
+			scheme = &t
+		case *runtime.Scheme:
+			scheme = t
+		default:
+			log.Panicf("Unsupported type %t", v)
+		}
+	}
+
+	Kube = startHarness(options, sinks, scheme)
+	Kube.Client = newClient(scheme)
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -160,7 +173,7 @@ func newClientConfig(kubeconfig string) (*rest.Config, error) {
 	).ClientConfig()
 }
 
-func newClient() client.Client {
+func newClient(scheme* runtime.Scheme) client.Client {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if len(kubeconfig) == 0 {
 		log.Panicf("KUBECONFIG is empty or not set")
@@ -171,7 +184,10 @@ func newClient() client.Client {
 		log.Panic(err)
 	}
 
-	cclient, err := client.New(config, client.Options{})
+	cclient, err := client.New(config, client.Options{
+		Scheme: scheme,
+		Mapper: nil,
+	})
 	if err != nil {
 		log.Panic(err)
 	}
@@ -179,7 +195,7 @@ func newClient() client.Client {
 	return cclient
 }
 
-func startHarness(options Options, sinks Sinks) *Harness {
+func startHarness(options Options, sinks Sinks, scheme* runtime.Scheme) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
 	stopCluster(options, sinks)
@@ -188,7 +204,8 @@ func startHarness(options Options, sinks Sinks) *Harness {
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
-		client:  nil,
+		Scheme:  scheme,
+		Client:  nil,
 	}
 }
 
