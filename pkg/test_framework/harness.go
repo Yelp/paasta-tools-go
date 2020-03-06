@@ -109,12 +109,30 @@ func Parse() *Options {
 	return &options
 }
 
-func Start(options Options, sinks Sinks, scheme  *runtime.Scheme) {
+// We have a fair number of optional parameters here, let's use poor man's default
+func Start(options Options, args ... interface{}) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
+	sinks := Sinks{}
+	var scheme *runtime.Scheme = nil
+	for _, v := range(args) {
+		switch t := v.(type) {
+		case Sinks:
+			sinks = t
+		case *Sinks:
+			sinks = *t
+		case runtime.Scheme:
+			scheme = &t
+		case *runtime.Scheme:
+			scheme = t
+		default:
+			log.Panicf("Unsupported type %t", v)
+		}
+	}
+
 	Kube = startHarness(options, sinks, scheme)
 	Kube.Client = newClient(scheme)
 }
