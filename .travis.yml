@@ -6,3 +6,5 @@ branches:
 language: go
 go:
   - 1.12.15
+services:
+  - docker
