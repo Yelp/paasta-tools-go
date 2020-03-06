@@ -20,7 +20,7 @@ func TestStartQuick(t *testing.T) {
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
-	kube := startHarness(options, sinks)
+	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	test := kube.NewTest(t).Setup()
 	err := test.StartOperator()
@@ -65,7 +65,7 @@ func TestStartSlowNoCleanup(t *testing.T) {
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
-	kube := startHarness(options, sinks)
+	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	test := kube.NewTest(t).Setup()
 
@@ -116,7 +116,7 @@ func TestStartSlowWithCleanup(t *testing.T) {
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Unsetenv("RND")
-	kube := startHarness(options, sinks)
+	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	test := kube.NewTest(t).Setup()
 
