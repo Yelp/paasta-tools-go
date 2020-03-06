@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,22 +15,15 @@ import (
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
 	"github.com/subosito/gotenv"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-type internalState struct {
-	testCounter uint32
-}
-
 type Harness struct {
-	internalState
 	harness.Harness
 	Options Options
 	Sinks   Sinks
-	Scheme  *runtime.Scheme
 	Client  client.Client
 }
 
@@ -51,8 +43,6 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 		Test:            *test,
 		operatorRunning: false,
 		harness:         h,
-		testCount:       atomic.AddUint32(&h.internalState.testCounter, 1),
-		envs:            map[string]string{},
 	}
 }
 
@@ -69,11 +59,10 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 
 type Options struct {
 	harness.Options
-	Makefile      string
-	MakeDir       string
-	Prefix        string
-	OperatorDelay time.Duration
-	EnvAlways     bool
+	Makefile string
+	MakeDir  string
+	Prefix   string
+	OperatorStartDelay time.Duration
 }
 
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
@@ -86,92 +75,16 @@ type Sinks struct {
 
 var Kube *Harness
 
-type ParseOptions struct {
-	MakeDir       string
-	Manifests     string
-	Prefix        string
-	NoCleanup     bool
-	OperatorDelay time.Duration
-	EnvAlways     bool
-	OsArgs        []string
-	CmdLine       *flag.FlagSet
-}
+func Parse() *Options {
+	noCleanup := flag.Bool("k8s.no-cleanup", false, "should test cleanup after themselves")
+	verbose := flag.Bool("k8s.log.verbose", false, "turn on more verbose logging")
+	makefile := flag.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to makedir")
+	makedir := flag.String("k8s.makedir", "", "directory to makefile")
+	prefix := flag.String("k8s.prefix", "test", "prefix for make cluster manipulation targets")
+	manifests := flag.String("k8s.manifests", "manifests", "directory to K8s manifests")
+	delay := flag.Duration("k8s.op-delay", 2 * time.Second, "operator start delay")
 
-type ParseOptionFn func (a* ParseOptions)
-
-func DefaultMakeDir(makedir string) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.MakeDir = makedir
-	}
-}
-
-func DefaultManifests(manifests string) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.Manifests = manifests
-	}
-}
-
-func DefaultPrefix(prefix string) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.Prefix = prefix
-	}
-}
-
-func DefaultNoCleanup() ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.NoCleanup = true
-	}
-}
-
-func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.OperatorDelay = opdelay
-	}
-}
-
-func DefaultEnvAlways() ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.EnvAlways = true
-	}
-}
-
-func OverrideOsArgs(osargs []string) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.OsArgs = osargs
-	}
-}
-
-func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
-	return func(a* ParseOptions) {
-		a.CmdLine = cmdline
-	}
-}
-
-// We are making use of Functional Options pattern here.
-func Parse(opts ...ParseOptionFn) *Options {
-	args := ParseOptions{
-		MakeDir:       "",
-		Manifests:     "manifests",
-		Prefix:        "test",
-		NoCleanup:     false,
-		OperatorDelay: 2 * time.Second,
-		EnvAlways:     false,
-		OsArgs:        os.Args[1:],
-		CmdLine:       flag.CommandLine,
-	}
-	for _, opt := range opts {
-		opt(&args)
-	}
-
-	noCleanup := args.CmdLine.Bool("k8s.no-cleanup", args.NoCleanup, "should test cleanup after themselves")
-	verbose := args.CmdLine.Bool("k8s.log.verbose", false, "turn on more verbose logging")
-	makefile := args.CmdLine.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to MakeDir")
-	makedir := args.CmdLine.String("k8s.makedir", args.MakeDir, "directory to makefile")
-	prefix := args.CmdLine.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
-	manifests := args.CmdLine.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
-	delay := args.CmdLine.Duration("k8s.op-delay", args.OperatorDelay, "operator start delay")
-	envAlways := args.CmdLine.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
-	_ = args.CmdLine.Parse(args.OsArgs)
+	flag.Parse()
 
 	// NOTE: We call "sanitize" functions both here and in Start(). This is to enable
 	// the users to create Options by hand, in case if they do not want to use this
@@ -182,11 +95,10 @@ func Parse(opts ...ParseOptionFn) *Options {
 			NoCleanup:         *noCleanup,
 			Logger:            &logger.PrintfLogger{},
 		},
-		Makefile:      *makefile,
-		MakeDir:       sanitizeMakeDir(*makedir),
-		Prefix:        sanitizePrefix(*prefix),
-		OperatorDelay: *delay,
-		EnvAlways:     *envAlways,
+		Makefile:           *makefile,
+		MakeDir:            sanitizeMakeDir(*makedir),
+		Prefix:             sanitizePrefix(*prefix),
+		OperatorStartDelay: *delay,
 	}
 	if *verbose {
 		options.LogLevel = logger.Debug
@@ -195,18 +107,14 @@ func Parse(opts ...ParseOptionFn) *Options {
 	return &options
 }
 
-// We have a fair number of optional parameters here, let's use poor man's default
-func Start(options Options, sinks* Sinks, scheme* runtime.Scheme) {
+func Start(m *testing.M, options Options, sinks Sinks) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
-	if sinks == nil {
-		sinks = &Sinks{}
-	}
-	Kube = startHarness(options, *sinks, scheme)
-	Kube.Client = newClient(scheme)
+	Kube = startHarness(options, sinks)
+	Kube.Client = newClient()
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -245,7 +153,7 @@ func newClientConfig(kubeconfig string) (*rest.Config, error) {
 	).ClientConfig()
 }
 
-func newClient(scheme* runtime.Scheme) client.Client {
+func newClient() client.Client {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if len(kubeconfig) == 0 {
 		log.Panicf("KUBECONFIG is empty or not set")
@@ -256,10 +164,7 @@ func newClient(scheme* runtime.Scheme) client.Client {
 		log.Panic(err)
 	}
 
-	cclient, err := client.New(config, client.Options{
-		Scheme: scheme,
-		Mapper: nil,
-	})
+	cclient, err := client.New(config, client.Options{})
 	if err != nil {
 		log.Panic(err)
 	}
@@ -267,17 +172,15 @@ func newClient(scheme* runtime.Scheme) client.Client {
 	return cclient
 }
 
-func startHarness(options Options, sinks Sinks, scheme* runtime.Scheme) *Harness {
+func startHarness(options Options, sinks Sinks) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
 	stopCluster(options, sinks)
 	startCluster(options, sinks)
 	return &Harness{
-		internalState: internalState{0},
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
-		Scheme:  scheme,
 		Client:  nil,
 	}
 }
@@ -288,7 +191,7 @@ func checkMakefile(options Options, sinks Sinks) {
 	check := func(target string) {
 		args := []string{"make", "-s", "-f", makefile, "-C", makedir, "--dry-run", target}
 		log.Printf("Checking %v ...", args)
-		err := run(sinks.Stdout, sinks.Stderr, args, nil)
+		err := run(sinks.Stdout, sinks.Stderr, args)
 		if err != nil {
 			log.Panicf("error checking target %s: %v", target, err)
 		} else {
@@ -324,7 +227,7 @@ func buildEnv(options Options, sinks Sinks) {
 	// clone sinks.Stdout and add exports
 	cout := append([]io.Writer{}, sinks.Stdout...)
 	cout = append(cout, &exports)
-	err := run(cout, sinks.Stderr, args, nil)
+	err := run(cout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -337,7 +240,7 @@ func buildEnv(options Options, sinks Sinks) {
 	for key, val := range env {
 		// Empty environment variable looks the same as undefined to
 		// the user, so let's treat them the same way here, too
-		if old, present := os.LookupEnv(key); options.EnvAlways || !present || old == "" {
+		if old, present := os.LookupEnv(key); !present || old == "" {
 			if err := os.Setenv(key, val); err != nil {
 				log.Panic(err)
 			}
@@ -350,7 +253,7 @@ func startCluster(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStart()}
 	log.Printf("Running %v ...", args)
-	err := run(sinks.Stdout, sinks.Stderr, args, nil)
+	err := run(sinks.Stdout, sinks.Stderr, args)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -372,6 +275,6 @@ func stopCluster(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStop()}
 	log.Printf("Running %v ...", args)
 	// if this fails that's perfectly OK - the cluster might not have been running!
-	_ = run(sinks.Stdout, sinks.Stderr, args, nil)
+	_ = run(sinks.Stdout, sinks.Stderr, args)
 	log.Print("... done")
 }
