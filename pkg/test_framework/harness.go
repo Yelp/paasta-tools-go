@@ -15,6 +15,7 @@ import (
 	"github.com/dlespiau/kube-test-harness/logger"
 	htesting "github.com/dlespiau/kube-test-harness/testing"
 	"github.com/subosito/gotenv"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
@@ -24,6 +25,7 @@ type Harness struct {
 	harness.Harness
 	Options Options
 	Sinks   Sinks
+	Scheme  *runtime.Scheme
 	Client  client.Client
 }
 
@@ -107,14 +109,14 @@ func Parse() *Options {
 	return &options
 }
 
-func Start(options Options, sinks Sinks) {
+func Start(options Options, sinks Sinks, scheme  *runtime.Scheme) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
 	options.MakeDir = sanitizeMakeDir(options.MakeDir)
 	options.Prefix = sanitizePrefix(options.Prefix)
-	Kube = startHarness(options, sinks)
-	Kube.Client = newClient()
+	Kube = startHarness(options, sinks, scheme)
+	Kube.Client = newClient(scheme)
 }
 
 // NOTE: this function MUST be idempotent, because it will be called both
@@ -153,7 +155,7 @@ func newClientConfig(kubeconfig string) (*rest.Config, error) {
 	).ClientConfig()
 }
 
-func newClient() client.Client {
+func newClient(scheme* runtime.Scheme) client.Client {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if len(kubeconfig) == 0 {
 		log.Panicf("KUBECONFIG is empty or not set")
@@ -164,7 +166,10 @@ func newClient() client.Client {
 		log.Panic(err)
 	}
 
-	cclient, err := client.New(config, client.Options{})
+	cclient, err := client.New(config, client.Options{
+		Scheme: scheme,
+		Mapper: nil,
+	})
 	if err != nil {
 		log.Panic(err)
 	}
@@ -172,7 +177,7 @@ func newClient() client.Client {
 	return cclient
 }
 
-func startHarness(options Options, sinks Sinks) *Harness {
+func startHarness(options Options, sinks Sinks, scheme* runtime.Scheme) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
 	stopCluster(options, sinks)
@@ -181,6 +186,7 @@ func startHarness(options Options, sinks Sinks) *Harness {
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
+		Scheme:  scheme,
 		Client:  nil,
 	}
 }
