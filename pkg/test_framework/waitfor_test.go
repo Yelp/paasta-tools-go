@@ -17,7 +17,7 @@ func TestWaitFor_Basic(t *testing.T) {
 		return
 	}
 	options := *newOptions("itest")
-	Start(options)
+	Start(options, nil, nil)
 	defer Kube.Close()
 
 	// See if the kubernetes service is available
