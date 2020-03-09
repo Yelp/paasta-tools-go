@@ -61,10 +61,11 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 
 type Options struct {
 	harness.Options
-	Makefile string
-	MakeDir  string
-	Prefix   string
+	Makefile           string
+	MakeDir            string
+	Prefix             string
 	OperatorStartDelay time.Duration
+	EnvAlways          bool
 }
 
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
@@ -85,6 +86,7 @@ func Parse() *Options {
 	prefix := flag.String("k8s.prefix", "test", "prefix for make cluster manipulation targets")
 	manifests := flag.String("k8s.manifests", "manifests", "directory to K8s manifests")
 	delay := flag.Duration("k8s.op-delay", 2 * time.Second, "operator start delay")
+	envAlways := flag.Bool("k8s.env-always", false, "always use environment variables from makefile")
 
 	flag.Parse()
 
@@ -101,6 +103,7 @@ func Parse() *Options {
 		MakeDir:            sanitizeMakeDir(*makedir),
 		Prefix:             sanitizePrefix(*prefix),
 		OperatorStartDelay: *delay,
+		EnvAlways:          *envAlways,
 	}
 	if *verbose {
 		options.LogLevel = logger.Debug
@@ -250,7 +253,7 @@ func buildEnv(options Options, sinks Sinks) {
 	for key, val := range env {
 		// Empty environment variable looks the same as undefined to
 		// the user, so let's treat them the same way here, too
-		if old, present := os.LookupEnv(key); !present || old == "" {
+		if old, present := os.LookupEnv(key); options.EnvAlways || !present || old == "" {
 			if err := os.Setenv(key, val); err != nil {
 				log.Panic(err)
 			}
