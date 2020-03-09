@@ -28,8 +28,8 @@ func TestWaitFor_Basic(t *testing.T) {
 			res := &corev1.ServiceList{}
 			err := Kube.Client.List(
 				context.TODO(),
-				&client.ListOptions{Namespace: "default"},
 				res,
+				&client.ListOptions{Namespace: "default"},
 			)
 			return res, err
 		},
