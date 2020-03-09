@@ -78,17 +78,85 @@ type Sinks struct {
 
 var Kube *Harness
 
-func Parse() *Options {
-	noCleanup := flag.Bool("k8s.no-cleanup", false, "should test cleanup after themselves")
-	verbose := flag.Bool("k8s.log.verbose", false, "turn on more verbose logging")
-	makefile := flag.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to makedir")
-	makedir := flag.String("k8s.makedir", "", "directory to makefile")
-	prefix := flag.String("k8s.prefix", "test", "prefix for make cluster manipulation targets")
-	manifests := flag.String("k8s.manifests", "manifests", "directory to K8s manifests")
-	delay := flag.Duration("k8s.op-delay", 2 * time.Second, "operator start delay")
-	envAlways := flag.Bool("k8s.env-always", false, "always use environment variables from makefile")
+type ParseOptions struct {
+	MakeDir            string
+	Manifests          string
+	Prefix             string
+	NoCleanup          bool
+	OperatorStartDelay time.Duration
+	EnvAlways          bool
+	OsArgs             []string
+}
 
-	flag.Parse()
+type ParseOptionFn func (a* ParseOptions)
+
+func DefaultMakeDir(makedir string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.MakeDir = makedir
+	}
+}
+
+func DefaultManifests(manifests string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.Manifests = manifests
+	}
+}
+
+func DefaultPrefix(prefix string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.Prefix = prefix
+	}
+}
+
+func DefaultNoCleanup() ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.NoCleanup = true
+	}
+}
+
+func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.OperatorStartDelay = opdelay
+	}
+}
+
+func DefaultEnvAlways() ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.EnvAlways = true
+	}
+}
+
+func OverrideOsArgs(osargs []string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.OsArgs = osargs
+	}
+}
+
+// We are making use of Functional Options pattern here.
+func Parse(opts ...ParseOptionFn) *Options {
+	args := ParseOptions{
+		MakeDir:            "",
+		Manifests:          "manifests",
+		Prefix:             "test",
+		NoCleanup:          false,
+		OperatorStartDelay: 2 * time.Second,
+		EnvAlways:          false,
+		OsArgs:             os.Args[1:],
+	}
+	for _, opt := range opts {
+		opt(&args)
+	}
+
+	cmdline := flag.NewFlagSet(os.Args[0], flag.PanicOnError)
+	noCleanup := cmdline.Bool("k8s.no-cleanup", args.NoCleanup, "should test cleanup after themselves")
+	verbose := cmdline.Bool("k8s.log.verbose", false, "turn on more verbose logging")
+	makefile := cmdline.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to MakeDir")
+	makedir := cmdline.String("k8s.makedir", args.MakeDir, "directory to makefile")
+	prefix := cmdline.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
+	manifests := cmdline.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
+	delay := cmdline.Duration("k8s.op-delay", args.OperatorStartDelay, "operator start delay")
+	envAlways := cmdline.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
+	_ = cmdline.Parse(args.OsArgs)
 
 	// NOTE: We call "sanitize" functions both here and in Start(). This is to enable
 	// the users to create Options by hand, in case if they do not want to use this
