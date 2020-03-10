@@ -61,10 +61,11 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 
 type Options struct {
 	harness.Options
-	Makefile string
-	MakeDir  string
-	Prefix   string
-	OperatorStartDelay time.Duration
+	Makefile      string
+	MakeDir       string
+	Prefix        string
+	OperatorDelay time.Duration
+	EnvAlways     bool
 }
 
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
@@ -77,16 +78,92 @@ type Sinks struct {
 
 var Kube *Harness
 
-func Parse() *Options {
-	noCleanup := flag.Bool("k8s.no-cleanup", false, "should test cleanup after themselves")
-	verbose := flag.Bool("k8s.log.verbose", false, "turn on more verbose logging")
-	makefile := flag.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to makedir")
-	makedir := flag.String("k8s.makedir", "", "directory to makefile")
-	prefix := flag.String("k8s.prefix", "test", "prefix for make cluster manipulation targets")
-	manifests := flag.String("k8s.manifests", "manifests", "directory to K8s manifests")
-	delay := flag.Duration("k8s.op-delay", 2 * time.Second, "operator start delay")
+type ParseOptions struct {
+	MakeDir       string
+	Manifests     string
+	Prefix        string
+	NoCleanup     bool
+	OperatorDelay time.Duration
+	EnvAlways     bool
+	OsArgs        []string
+	CmdLine       *flag.FlagSet
+}
 
-	flag.Parse()
+type ParseOptionFn func (a* ParseOptions)
+
+func DefaultMakeDir(makedir string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.MakeDir = makedir
+	}
+}
+
+func DefaultManifests(manifests string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.Manifests = manifests
+	}
+}
+
+func DefaultPrefix(prefix string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.Prefix = prefix
+	}
+}
+
+func DefaultNoCleanup() ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.NoCleanup = true
+	}
+}
+
+func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.OperatorDelay = opdelay
+	}
+}
+
+func DefaultEnvAlways() ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.EnvAlways = true
+	}
+}
+
+func OverrideOsArgs(osargs []string) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.OsArgs = osargs
+	}
+}
+
+func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.CmdLine = cmdline
+	}
+}
+
+// We are making use of Functional Options pattern here.
+func Parse(opts ...ParseOptionFn) *Options {
+	args := ParseOptions{
+		MakeDir:       "",
+		Manifests:     "manifests",
+		Prefix:        "test",
+		NoCleanup:     false,
+		OperatorDelay: 2 * time.Second,
+		EnvAlways:     false,
+		OsArgs:        os.Args[1:],
+		CmdLine:       flag.CommandLine,
+	}
+	for _, opt := range opts {
+		opt(&args)
+	}
+
+	noCleanup := args.CmdLine.Bool("k8s.no-cleanup", args.NoCleanup, "should test cleanup after themselves")
+	verbose := args.CmdLine.Bool("k8s.log.verbose", false, "turn on more verbose logging")
+	makefile := args.CmdLine.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to MakeDir")
+	makedir := args.CmdLine.String("k8s.makedir", args.MakeDir, "directory to makefile")
+	prefix := args.CmdLine.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
+	manifests := args.CmdLine.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
+	delay := args.CmdLine.Duration("k8s.op-delay", args.OperatorDelay, "operator start delay")
+	envAlways := args.CmdLine.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
+	_ = args.CmdLine.Parse(args.OsArgs)
 
 	// NOTE: We call "sanitize" functions both here and in Start(). This is to enable
 	// the users to create Options by hand, in case if they do not want to use this
@@ -97,10 +174,11 @@ func Parse() *Options {
 			NoCleanup:         *noCleanup,
 			Logger:            &logger.PrintfLogger{},
 		},
-		Makefile:           *makefile,
-		MakeDir:            sanitizeMakeDir(*makedir),
-		Prefix:             sanitizePrefix(*prefix),
-		OperatorStartDelay: *delay,
+		Makefile:      *makefile,
+		MakeDir:       sanitizeMakeDir(*makedir),
+		Prefix:        sanitizePrefix(*prefix),
+		OperatorDelay: *delay,
+		EnvAlways:     *envAlways,
 	}
 	if *verbose {
 		options.LogLevel = logger.Debug
@@ -250,7 +328,7 @@ func buildEnv(options Options, sinks Sinks) {
 	for key, val := range env {
 		// Empty environment variable looks the same as undefined to
 		// the user, so let's treat them the same way here, too
-		if old, present := os.LookupEnv(key); !present || old == "" {
+		if old, present := os.LookupEnv(key); options.EnvAlways || !present || old == "" {
 			if err := os.Setenv(key, val); err != nil {
 				log.Panic(err)
 			}

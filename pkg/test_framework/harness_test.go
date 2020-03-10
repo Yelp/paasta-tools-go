@@ -2,14 +2,14 @@ package framework
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
-	harness "github.com/dlespiau/kube-test-harness"
-	"github.com/dlespiau/kube-test-harness/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -96,26 +96,107 @@ func TestRunSimple(t *testing.T) {
 	assert.Empty(t, cerr.String())
 }
 
-func newOptions(args ... string) *Options {
-	prefix := "tests"
-	if len(args) >= 1 {
-		prefix = args[0]
-	}
-	nocleanup := false
-	if len(args) >= 2 {
-		nocleanup = args[1] == "nocleanup"
-	}
+func TestParse(t *testing.T) {
+	// Verify default options
+	defs := *Parse(OverrideOsArgs([]string{}))
+	assert.Equal(t, "manifests", defs.ManifestDirectory)
+	assert.Equal(t, false, defs.NoCleanup)
+	assert.Equal(t, "Makefile", defs.Makefile)
+	assert.Equal(t, sanitizeMakeDir(""), defs.MakeDir)
+	assert.Equal(t, "test-", defs.Prefix)
+	assert.Equal(t, 2 * time.Second, defs.OperatorDelay)
+	assert.Equal(t, false, defs.EnvAlways)
 
-	return &Options{
-		Options: harness.Options{
-			ManifestDirectory: "",
-			NoCleanup:         nocleanup,
-			Logger:            &logger.PrintfLogger{},
-		},
-		Makefile: "Makefile",
-		MakeDir:  sanitizeMakeDir("tests"),
-		Prefix:   sanitizePrefix(prefix),
-	}
+	// Test handling of unknown options
+	assert.Panics(t, func() {
+		_ = Parse(
+			OverrideOsArgs([]string{"-no-such-option"}),
+			OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+			)
+	})
+
+	// Test individual options (except verbose)
+	r1 := defs
+	r1.MakeDir = sanitizeMakeDir("foo")
+	r1.ManifestDirectory = "baz"
+	r1.Prefix = "fizz-"
+	r1.OperatorDelay = 5 * time.Second
+	r1.NoCleanup = true
+	r1.EnvAlways = true
+
+	// Options can be set with Default... functions
+	o1 := *Parse(
+		DefaultMakeDir("foo"),
+		DefaultManifests("baz"),
+		DefaultPrefix("fizz"),
+		DefaultOperatorDelay(5 * time.Second),
+		DefaultNoCleanup(),
+		DefaultEnvAlways(),
+		OverrideOsArgs([]string{}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		)
+
+	// Options can be set with command line
+	assert.Equal(t, r1, o1)
+	o2 := *Parse(
+		OverrideOsArgs([]string{
+			"-k8s.makedir=foo",
+			"-k8s.manifests=baz",
+			"-k8s.prefix=fizz",
+			"-k8s.op-delay=5s",
+			"-k8s.no-cleanup=true",
+			"-k8s.env-always=true",
+		}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		)
+	assert.Equal(t, r1, o2)
+
+	// Options can be set with Default... functions and overridden from command line
+	o3 := *Parse(
+		DefaultMakeDir("foo"),
+		DefaultManifests("baz"),
+		DefaultPrefix("fizz"),
+		DefaultOperatorDelay(5 * time.Second),
+		DefaultNoCleanup(),
+		DefaultEnvAlways(),
+		OverrideOsArgs([]string{
+			"-k8s.makedir=tests",
+			"-k8s.manifests=manifests",
+			"-k8s.prefix=tests",
+			"-k8s.op-delay=2s",
+			"-k8s.no-cleanup=false",
+			"-k8s.env-always=false",
+		}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		)
+	r2 := defs
+	r2.Prefix = "tests-"
+	r2.MakeDir = sanitizeMakeDir("tests")
+	assert.Equal(t, r2, o3)
+
+	// Test merging of options
+	oflags := flag.NewFlagSet("tests", flag.PanicOnError)
+	something := oflags.Bool("something", false, "some bool value")
+	o4 := *Parse(
+		OverrideOsArgs([]string{"-k8s.no-cleanup", "-k8s.prefix", "buzz", "-something", "true"}),
+		OverrideCmdLine(oflags),
+		)
+	r3 := defs
+	r3.NoCleanup = true
+	r3.Prefix = "buzz-"
+	assert.Equal(t, r3, o4)
+	assert.Equal(t, true, *something)
+}
+
+func newOptions(opts ...ParseOptionFn) *Options {
+	// The options in the front are applied first
+	opts = append([]ParseOptionFn{
+		OverrideOsArgs([]string{}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		DefaultMakeDir("tests"),
+		DefaultPrefix("tests"),
+	}, opts ...)
+	return Parse(opts...)
 }
 
 func TestCheckAll(t *testing.T) {
@@ -138,7 +219,7 @@ $`, cout.String())
 
 func TestCheckFail(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, not skipped
-	options := *newOptions("fail-close")
+	options := *newOptions(DefaultPrefix("fail-close"))
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -155,7 +236,7 @@ $`, cout.String())
 
 func TestCheckNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions("fail-close", "nocleanup")
+	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -172,16 +253,17 @@ $`, cout.String())
 }
 
 func TestStart(t *testing.T) {
-	options := *newOptions()
+	options := *newOptions(DefaultEnvAlways())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
-	_ = os.Unsetenv("RND")
+	_ = os.Setenv("RND", "DUMMYDATA")
 	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	rnd, ok := os.LookupEnv("RND")
+	assert.NotEqual(t, "DUMMYDATA", rnd)
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
@@ -204,7 +286,7 @@ $`, rnd, rnd, rnd, rnd)
 
 func TestStartNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions("fail-close", "nocleanup")
+	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
