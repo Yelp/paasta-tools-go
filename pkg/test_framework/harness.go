@@ -61,11 +61,11 @@ func (h *Harness) OpenManifest(manifest string) (*os.File, error) {
 
 type Options struct {
 	harness.Options
-	Makefile           string
-	MakeDir            string
-	Prefix             string
-	OperatorStartDelay time.Duration
-	EnvAlways          bool
+	Makefile      string
+	MakeDir       string
+	Prefix        string
+	OperatorDelay time.Duration
+	EnvAlways     bool
 }
 
 // Users can use these to capture the "console" output from the spawned sub-processes rather than
@@ -79,13 +79,13 @@ type Sinks struct {
 var Kube *Harness
 
 type ParseOptions struct {
-	MakeDir            string
-	Manifests          string
-	Prefix             string
-	NoCleanup          bool
-	OperatorStartDelay time.Duration
-	EnvAlways          bool
-	OsArgs             []string
+	MakeDir       string
+	Manifests     string
+	Prefix        string
+	NoCleanup     bool
+	OperatorDelay time.Duration
+	EnvAlways     bool
+	OsArgs        []string
 }
 
 type ParseOptionFn func (a* ParseOptions)
@@ -116,7 +116,7 @@ func DefaultNoCleanup() ParseOptionFn {
 
 func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
 	return func(a* ParseOptions) {
-		a.OperatorStartDelay = opdelay
+		a.OperatorDelay = opdelay
 	}
 }
 
@@ -135,13 +135,13 @@ func OverrideOsArgs(osargs []string) ParseOptionFn {
 // We are making use of Functional Options pattern here.
 func Parse(opts ...ParseOptionFn) *Options {
 	args := ParseOptions{
-		MakeDir:            "",
-		Manifests:          "manifests",
-		Prefix:             "test",
-		NoCleanup:          false,
-		OperatorStartDelay: 2 * time.Second,
-		EnvAlways:          false,
-		OsArgs:             os.Args[1:],
+		MakeDir:       "",
+		Manifests:     "manifests",
+		Prefix:        "test",
+		NoCleanup:     false,
+		OperatorDelay: 2 * time.Second,
+		EnvAlways:     false,
+		OsArgs:        os.Args[1:],
 	}
 	for _, opt := range opts {
 		opt(&args)
@@ -154,7 +154,7 @@ func Parse(opts ...ParseOptionFn) *Options {
 	makedir := cmdline.String("k8s.makedir", args.MakeDir, "directory to makefile")
 	prefix := cmdline.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
 	manifests := cmdline.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
-	delay := cmdline.Duration("k8s.op-delay", args.OperatorStartDelay, "operator start delay")
+	delay := cmdline.Duration("k8s.op-delay", args.OperatorDelay, "operator start delay")
 	envAlways := cmdline.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
 	_ = cmdline.Parse(args.OsArgs)
 
@@ -167,11 +167,11 @@ func Parse(opts ...ParseOptionFn) *Options {
 			NoCleanup:         *noCleanup,
 			Logger:            &logger.PrintfLogger{},
 		},
-		Makefile:           *makefile,
-		MakeDir:            sanitizeMakeDir(*makedir),
-		Prefix:             sanitizePrefix(*prefix),
-		OperatorStartDelay: *delay,
-		EnvAlways:          *envAlways,
+		Makefile:      *makefile,
+		MakeDir:       sanitizeMakeDir(*makedir),
+		Prefix:        sanitizePrefix(*prefix),
+		OperatorDelay: *delay,
+		EnvAlways:     *envAlways,
 	}
 	if *verbose {
 		options.LogLevel = logger.Debug

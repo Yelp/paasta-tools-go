@@ -146,7 +146,7 @@ func startOperator(options Options, sinks Sinks) error {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
-	handler := asynchronousHandler{options.OperatorStartDelay, nil}
+	handler := asynchronousHandler{options.OperatorDelay, nil}
 	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
 		return err
 	}
