@@ -55,7 +55,7 @@ $`, rnd, rnd, rnd, rnd, ns, rnd)
 }
 
 func TestStartSlowNoCleanup(t *testing.T) {
-	options := *newOptions("test-sleep05", "nocleanup")
+	options := *newOptions(DefaultPrefix("test-sleep05"), DefaultNoCleanup())
 	options.OperatorDelay = 200 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
@@ -105,7 +105,7 @@ $`, rnd, rnd, rnd, ns)
 }
 
 func TestStartSlowWithCleanup(t *testing.T) {
-	options := *newOptions("test-sleep05")
+	options := *newOptions(DefaultPrefix("test-sleep05"))
 	options.OperatorDelay = 200 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}

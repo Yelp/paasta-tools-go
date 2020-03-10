@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	harness "github.com/dlespiau/kube-test-harness"
-	"github.com/dlespiau/kube-test-harness/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -96,26 +94,14 @@ func TestRunSimple(t *testing.T) {
 	assert.Empty(t, cerr.String())
 }
 
-func newOptions(args ... string) *Options {
-	prefix := "tests"
-	if len(args) >= 1 {
-		prefix = args[0]
-	}
-	nocleanup := false
-	if len(args) >= 2 {
-		nocleanup = args[1] == "nocleanup"
-	}
-
-	return &Options{
-		Options: harness.Options{
-			ManifestDirectory: "",
-			NoCleanup:         nocleanup,
-			Logger:            &logger.PrintfLogger{},
-		},
-		Makefile: "Makefile",
-		MakeDir:  sanitizeMakeDir("tests"),
-		Prefix:   sanitizePrefix(prefix),
-	}
+func newOptions(opts ...ParseOptionFn) *Options {
+	// The options in the front are applied first
+	opts = append([]ParseOptionFn{
+		OverrideOsArgs([]string{}),
+		DefaultMakeDir("tests"),
+		DefaultPrefix("tests"),
+	}, opts ...)
+	return Parse(opts...)
 }
 
 func TestCheckAll(t *testing.T) {
@@ -138,7 +124,7 @@ $`, cout.String())
 
 func TestCheckFail(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, not skipped
-	options := *newOptions("fail-close")
+	options := *newOptions(DefaultPrefix("fail-close"))
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -155,7 +141,7 @@ $`, cout.String())
 
 func TestCheckNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions("fail-close", "nocleanup")
+	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -204,7 +190,7 @@ $`, rnd, rnd, rnd, rnd)
 
 func TestStartNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions("fail-close", "nocleanup")
+	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
