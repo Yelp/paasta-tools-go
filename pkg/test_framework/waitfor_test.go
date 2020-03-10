@@ -16,7 +16,7 @@ func TestWaitFor_Basic(t *testing.T) {
 		t.Skip("This test is meant to run on Linux only")
 		return
 	}
-	options := *newOptions("itest")
+	options := *newOptions(DefaultPrefix("itest"))
 	Start(options, nil, nil)
 	defer Kube.Close()
 
