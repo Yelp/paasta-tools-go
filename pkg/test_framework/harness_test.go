@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -92,6 +93,77 @@ func TestRunSimple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "default BAZ\n", cout.String())
 	assert.Empty(t, cerr.String())
+}
+
+func TestParse(t *testing.T) {
+	// Verify default options
+	defs := *Parse(OverrideOsArgs([]string{}))
+	assert.Equal(t, "manifests", defs.ManifestDirectory)
+	assert.Equal(t, false, defs.NoCleanup)
+	assert.Equal(t, "Makefile", defs.Makefile)
+	assert.Equal(t, sanitizeMakeDir(""), defs.MakeDir)
+	assert.Equal(t, "test-", defs.Prefix)
+	assert.Equal(t, 2 * time.Second, defs.OperatorDelay)
+	assert.Equal(t, false, defs.EnvAlways)
+
+	// Test handling of unknown options
+	assert.Panics(t, func() {
+		_ = Parse(OverrideOsArgs([]string{"-k8s.no-such-option=0"}))
+	})
+
+	// Test individual options (except verbose)
+	r1 := defs
+	r1.MakeDir = sanitizeMakeDir("foo")
+	r1.ManifestDirectory = "baz"
+	r1.Prefix = "fizz-"
+	r1.OperatorDelay = 5 * time.Second
+	r1.NoCleanup = true
+	r1.EnvAlways = true
+
+	// Options can be set with Default... functions
+	o1 := *Parse(
+		DefaultMakeDir("foo"),
+		DefaultManifests("baz"),
+		DefaultPrefix("fizz"),
+		DefaultOperatorDelay(5 * time.Second),
+		DefaultNoCleanup(),
+		DefaultEnvAlways(),
+		OverrideOsArgs([]string{}),
+		)
+
+	// Options can be set with command line
+	assert.Equal(t, r1, o1)
+	o2 := *Parse(
+		OverrideOsArgs([]string{
+			"-k8s.makedir=foo",
+			"-k8s.manifests=baz",
+			"-k8s.prefix=fizz",
+			"-k8s.op-delay=5s",
+			"-k8s.no-cleanup=true",
+			"-k8s.env-always=true",
+		}))
+	assert.Equal(t, r1, o2)
+
+	// Options can be set with Default... functions and overridden from command line
+	o3 := *Parse(
+		DefaultMakeDir("foo"),
+		DefaultManifests("baz"),
+		DefaultPrefix("fizz"),
+		DefaultOperatorDelay(5 * time.Second),
+		DefaultNoCleanup(),
+		DefaultEnvAlways(),
+		OverrideOsArgs([]string{
+			"-k8s.makedir=tests",
+			"-k8s.manifests=manifests",
+			"-k8s.prefix=tests",
+			"-k8s.op-delay=2s",
+			"-k8s.no-cleanup=false",
+			"-k8s.env-always=false",
+		}))
+	r2 := defs
+	r2.Prefix = "tests-"
+	r2.MakeDir = sanitizeMakeDir("tests")
+	assert.Equal(t, r2, o3)
 }
 
 func newOptions(opts ...ParseOptionFn) *Options {
