@@ -2,6 +2,7 @@ package framework
 
 import (
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -108,7 +109,10 @@ func TestParse(t *testing.T) {
 
 	// Test handling of unknown options
 	assert.Panics(t, func() {
-		_ = Parse(OverrideOsArgs([]string{"-k8s.no-such-option=0"}))
+		_ = Parse(
+			OverrideOsArgs([]string{"-no-such-option"}),
+			OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+			)
 	})
 
 	// Test individual options (except verbose)
@@ -129,6 +133,7 @@ func TestParse(t *testing.T) {
 		DefaultNoCleanup(),
 		DefaultEnvAlways(),
 		OverrideOsArgs([]string{}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
 		)
 
 	// Options can be set with command line
@@ -141,7 +146,9 @@ func TestParse(t *testing.T) {
 			"-k8s.op-delay=5s",
 			"-k8s.no-cleanup=true",
 			"-k8s.env-always=true",
-		}))
+		}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		)
 	assert.Equal(t, r1, o2)
 
 	// Options can be set with Default... functions and overridden from command line
@@ -159,17 +166,33 @@ func TestParse(t *testing.T) {
 			"-k8s.op-delay=2s",
 			"-k8s.no-cleanup=false",
 			"-k8s.env-always=false",
-		}))
+		}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
+		)
 	r2 := defs
 	r2.Prefix = "tests-"
 	r2.MakeDir = sanitizeMakeDir("tests")
 	assert.Equal(t, r2, o3)
+
+	// Test merging of options
+	oflags := flag.NewFlagSet("tests", flag.PanicOnError)
+	something := oflags.Bool("something", false, "some bool value")
+	o4 := *Parse(
+		OverrideOsArgs([]string{"-k8s.no-cleanup", "-k8s.prefix", "buzz", "-something", "true"}),
+		OverrideCmdLine(oflags),
+		)
+	r3 := defs
+	r3.NoCleanup = true
+	r3.Prefix = "buzz-"
+	assert.Equal(t, r3, o4)
+	assert.Equal(t, true, *something)
 }
 
 func newOptions(opts ...ParseOptionFn) *Options {
 	// The options in the front are applied first
 	opts = append([]ParseOptionFn{
 		OverrideOsArgs([]string{}),
+		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
 		DefaultMakeDir("tests"),
 		DefaultPrefix("tests"),
 	}, opts ...)
