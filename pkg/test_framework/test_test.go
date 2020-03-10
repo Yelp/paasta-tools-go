@@ -13,7 +13,7 @@ import (
 
 func TestStartQuick(t *testing.T) {
 	options := *newOptions()
-	options.OperatorStartDelay = 500 * time.Millisecond
+	options.OperatorDelay = 500 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -56,7 +56,7 @@ $`, rnd, rnd, rnd, rnd, ns, rnd)
 
 func TestStartSlowNoCleanup(t *testing.T) {
 	options := *newOptions("test-sleep05", "nocleanup")
-	options.OperatorStartDelay = 200 * time.Millisecond
+	options.OperatorDelay = 200 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
@@ -106,7 +106,7 @@ $`, rnd, rnd, rnd, ns)
 
 func TestStartSlowWithCleanup(t *testing.T) {
 	options := *newOptions("test-sleep05")
-	options.OperatorStartDelay = 200 * time.Millisecond
+	options.OperatorDelay = 200 * time.Millisecond
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
