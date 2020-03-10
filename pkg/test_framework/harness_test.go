@@ -230,16 +230,17 @@ $`, cout.String())
 }
 
 func TestStart(t *testing.T) {
-	options := *newOptions()
+	options := *newOptions(DefaultEnvAlways())
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
 	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
 	// NOTE: buildEnv never overwrites existing env. variable
-	_ = os.Unsetenv("RND")
+	_ = os.Setenv("RND", "DUMMYDATA")
 	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
 	rnd, ok := os.LookupEnv("RND")
+	assert.NotEqual(t, "DUMMYDATA", rnd)
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
