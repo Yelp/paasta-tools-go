@@ -86,6 +86,7 @@ type ParseOptions struct {
 	OperatorDelay time.Duration
 	EnvAlways     bool
 	OsArgs        []string
+	CmdLine       *flag.FlagSet
 }
 
 type ParseOptionFn func (a* ParseOptions)
@@ -132,6 +133,12 @@ func OverrideOsArgs(osargs []string) ParseOptionFn {
 	}
 }
 
+func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
+	return func(a* ParseOptions) {
+		a.CmdLine = cmdline
+	}
+}
+
 // We are making use of Functional Options pattern here.
 func Parse(opts ...ParseOptionFn) *Options {
 	args := ParseOptions{
@@ -142,21 +149,21 @@ func Parse(opts ...ParseOptionFn) *Options {
 		OperatorDelay: 2 * time.Second,
 		EnvAlways:     false,
 		OsArgs:        os.Args[1:],
+		CmdLine:       flag.CommandLine,
 	}
 	for _, opt := range opts {
 		opt(&args)
 	}
 
-	cmdline := flag.NewFlagSet(os.Args[0], flag.PanicOnError)
-	noCleanup := cmdline.Bool("k8s.no-cleanup", args.NoCleanup, "should test cleanup after themselves")
-	verbose := cmdline.Bool("k8s.log.verbose", false, "turn on more verbose logging")
-	makefile := cmdline.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to MakeDir")
-	makedir := cmdline.String("k8s.makedir", args.MakeDir, "directory to makefile")
-	prefix := cmdline.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
-	manifests := cmdline.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
-	delay := cmdline.Duration("k8s.op-delay", args.OperatorDelay, "operator start delay")
-	envAlways := cmdline.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
-	_ = cmdline.Parse(args.OsArgs)
+	noCleanup := args.CmdLine.Bool("k8s.no-cleanup", args.NoCleanup, "should test cleanup after themselves")
+	verbose := args.CmdLine.Bool("k8s.log.verbose", false, "turn on more verbose logging")
+	makefile := args.CmdLine.String("k8s.makefile", "Makefile", "makefile for cluster manipulation targets, relative to MakeDir")
+	makedir := args.CmdLine.String("k8s.makedir", args.MakeDir, "directory to makefile")
+	prefix := args.CmdLine.String("k8s.prefix", args.Prefix, "prefix for make cluster manipulation targets")
+	manifests := args.CmdLine.String("k8s.manifests", args.Manifests, "directory to K8s manifests")
+	delay := args.CmdLine.Duration("k8s.op-delay", args.OperatorDelay, "operator start delay")
+	envAlways := args.CmdLine.Bool("k8s.env-always", args.EnvAlways, "always use environment variables from makefile")
+	_ = args.CmdLine.Parse(args.OsArgs)
 
 	// NOTE: We call "sanitize" functions both here and in Start(). This is to enable
 	// the users to create Options by hand, in case if they do not want to use this
