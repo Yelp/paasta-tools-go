@@ -42,16 +42,18 @@ func (n KubeResourceQuantity) MarshalJSON() ([]byte, error) {
 	return json.Marshal(string(n))
 }
 
-func (n KubeResourceQuantity) copy() (KubeResourceQuantity) {
+func (n KubeResourceQuantity) copy() KubeResourceQuantity {
 	return KubeResourceQuantity(string(n))
 }
 
 // PaastaContainerSpec : Spec for any paasta container with basic fields and utilities
 type PaastaContainerSpec struct {
-	CPU       *KubeResourceQuantity `json:"cpus"`
-	Memory    *KubeResourceQuantity `json:"mem"`
-	Disk      *KubeResourceQuantity `json:"disk"`
-	DiskLimit *KubeResourceQuantity `json:"disk_limit,omitempty"`
+	CPU         *KubeResourceQuantity `json:"cpus"`
+	CPULimit    *KubeResourceQuantity `json:"cpus_limit,omitempty"`
+	Memory      *KubeResourceQuantity `json:"mem"`
+	MemoryLimit *KubeResourceQuantity `json:"mem_limit,omitempty"`
+	Disk        *KubeResourceQuantity `json:"disk"`
+	DiskLimit   *KubeResourceQuantity `json:"disk_limit,omitempty"`
 }
 
 // GetContainerResources : get resource requirements based on the container spec
@@ -72,6 +74,22 @@ func (spec *PaastaContainerSpec) GetContainerResourcesWithDefaults(defaults *Paa
 		return nil, fmt.Errorf("error while parsing cpu request '%s': %s", cpu, err)
 	}
 
+	var cpuLimit KubeResourceQuantity
+	if spec.CPULimit != nil {
+		cpuLimit = *spec.CPULimit
+	} else {
+		cpuLimit = cpu
+	}
+
+	// Note, there is a gotcha in resource.Quantity.Value(): it rounds to full numbers.
+	// Since CPUs resources can be fractional, we have to rely on MilliValue() instead.
+	cpuLimitQuantity, err := resource.ParseQuantity(string(cpuLimit))
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing cpu limit '%s': %s", cpuLimit, err)
+	} else if cpuLimitQuantity.MilliValue() < cpuQuantity.MilliValue() {
+		return nil, fmt.Errorf("cpu limit '%s' must not be smaller than cpu '%s'", cpuLimit, cpu)
+	}
+
 	var memory KubeResourceQuantity
 	if spec.Memory != nil {
 		memory = spec.Memory.withSuffix()
@@ -81,6 +99,19 @@ func (spec *PaastaContainerSpec) GetContainerResourcesWithDefaults(defaults *Paa
 	memoryQuantity, err := resource.ParseQuantity(string(memory))
 	if err != nil {
 		return nil, fmt.Errorf("error while parsing memory '%s': %s", memory, err)
+	}
+
+	var memoryLimit KubeResourceQuantity
+	if spec.MemoryLimit != nil {
+		memoryLimit = spec.MemoryLimit.withSuffix()
+	} else {
+		memoryLimit = memory
+	}
+	memoryLimitQuantity, err := resource.ParseQuantity(string(memoryLimit))
+	if err != nil {
+		return nil, fmt.Errorf("error while parsing memory limit '%s': %s", memoryLimit, err)
+	} else if memoryLimitQuantity.Value() < memoryQuantity.Value() {
+		return nil, fmt.Errorf("memory limit '%s' must not be smaller than memory '%s'", memoryLimit, memory)
 	}
 
 	var disk KubeResourceQuantity
@@ -114,8 +145,8 @@ func (spec *PaastaContainerSpec) GetContainerResourcesWithDefaults(defaults *Paa
 			corev1.ResourceEphemeralStorage: diskQuantity,
 		},
 		Limits: corev1.ResourceList{
-			corev1.ResourceCPU:              cpuQuantity,
-			corev1.ResourceMemory:           memoryQuantity,
+			corev1.ResourceCPU:              cpuLimitQuantity,
+			corev1.ResourceMemory:           memoryLimitQuantity,
 			corev1.ResourceEphemeralStorage: diskLimitQuantity,
 		},
 	}, nil
@@ -128,8 +159,18 @@ func (in *PaastaContainerSpec) DeepCopyInto(out *PaastaContainerSpec) {
 		*out = new(KubeResourceQuantity)
 		**out = **in
 	}
+	if in.CPULimit != nil {
+		in, out := &in.CPULimit, &out.CPULimit
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
 	if in.Memory != nil {
 		in, out := &in.Memory, &out.Memory
+		*out = new(KubeResourceQuantity)
+		**out = **in
+	}
+	if in.MemoryLimit != nil {
+		in, out := &in.MemoryLimit, &out.MemoryLimit
 		*out = new(KubeResourceQuantity)
 		**out = **in
 	}
@@ -159,9 +200,11 @@ func newDefaultSpec() *PaastaContainerSpec {
 	memory := defaultMemory.copy()
 	disk := defaultDisk.copy()
 	return &PaastaContainerSpec{
-		CPU:       &cpu,
-		Memory:    &memory,
-		Disk:      &disk,
-		DiskLimit: nil,
+		CPU:         &cpu,
+		CPULimit:    nil,
+		Memory:      &memory,
+		MemoryLimit: nil,
+		Disk:        &disk,
+		DiskLimit:   nil,
 	}
 }
