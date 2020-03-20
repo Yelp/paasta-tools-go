@@ -47,6 +47,10 @@ func (t *Test) StopOperator() {
 	}
 }
 
+func (t *Test) RunTarget(name string) error {
+	return runTarget(t.harness.Options, t.harness.Sinks, name)
+}
+
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 	t.Test.DeleteDeployment(d)
 	t.Test.WaitForDeploymentDeleted(d, timeout)
@@ -175,4 +179,20 @@ func cleanup(options Options, sinks Sinks) {
 	// allow for errors here
 	_ = run(sinks.Stdout, sinks.Stderr, args)
 	log.Print("... done")
+}
+
+func runTarget(options Options, sinks Sinks, name string) error {
+	makefile := options.Makefile
+	makedir := options.MakeDir
+	target := options.Prefix + name
+	args := []string{"make", "-s", "-f", makefile, "-C", makedir, target}
+	log.Printf("Running %v ...", args)
+	// allow for errors here
+	err := run(sinks.Stdout, sinks.Stderr, args)
+	if err == nil {
+		log.Print("... done")
+	} else {
+		log.Printf("error running target %s: %v", target, err)
+	}
+	return err
 }

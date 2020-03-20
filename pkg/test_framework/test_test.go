@@ -151,3 +151,21 @@ $`, rnd, rnd, rnd, rnd, ns, rnd, ns, rnd)
 	assert.Equal(t, cmp, operator.String())
 	assert.Empty(t, cerr.String())
 }
+
+func TestRunArbitraryTarget(t *testing.T) {
+	options := *newOptions(DefaultEnvAlways())
+	cout := bytes.Buffer{}
+	cerr := bytes.Buffer{}
+	operator := bytes.Buffer{}
+	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
+	kube := startHarness(options, sinks, nil)
+	assert.NotNil(t, kube)
+
+	test := kube.NewTest(t).Setup()
+	err := test.RunTarget("foo")
+	assert.NoError(t, err)
+
+	// try again, detecting an error this time
+	err = test.RunTarget("bar")
+	assert.NotNil(t, err)
+}
