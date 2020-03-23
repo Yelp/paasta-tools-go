@@ -23,6 +23,13 @@ itest-cluster-stop:
 	  rm $${CIDFILE}; \
 	fi
 
+test-sleep05-foo:
+	@echo "test-sleep05-foo $${RND} $${TEST_OPERATOR_NS}"
+
+test-sleep05-bar:
+	@echo "test-sleep05-bar $${RND} $${TEST_OPERATOR_NS}, expected to raise an error"
+	false
+
 fail:
 	$(error $*)
 

@@ -199,12 +199,20 @@ func newOptions(opts ...ParseOptionFn) *Options {
 	return Parse(opts...)
 }
 
-func TestCheckAll(t *testing.T) {
-	options := *newOptions()
+func newSinks() (Sinks, *bytes.Buffer, *bytes.Buffer, *bytes.Buffer) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
-	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
+	return Sinks{
+		Stdout: []io.Writer{&cout},
+		Stderr: []io.Writer{&cerr},
+		Operator: []io.Writer{&operator},
+	}, &cout, &cerr, &operator
+}
+
+func TestCheckAll(t *testing.T) {
+	options := *newOptions()
+	sinks, cout, cerr, operator := newSinks()
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
@@ -220,10 +228,7 @@ $`, cout.String())
 func TestCheckFail(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, not skipped
 	options := *newOptions(DefaultPrefix("fail-close"))
-	cout := bytes.Buffer{}
-	cerr := bytes.Buffer{}
-	operator := bytes.Buffer{}
-	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
+	sinks, cout, cerr, operator := newSinks()
 	assert.Panics(t, func() { checkMakefile(options, sinks) })
 	// however, stopCluster() just swallows errors
 	stopCluster(options, sinks)
@@ -236,11 +241,11 @@ $`, cout.String())
 
 func TestCheckNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
-	cout := bytes.Buffer{}
-	cerr := bytes.Buffer{}
-	operator := bytes.Buffer{}
-	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
+	options := *newOptions(
+		DefaultPrefix("fail-close"),
+		DefaultNoCleanup(),
+	)
+	sinks, cout, cerr, operator := newSinks()
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
@@ -254,10 +259,7 @@ $`, cout.String())
 
 func TestStart(t *testing.T) {
 	options := *newOptions(DefaultEnvAlways())
-	cout := bytes.Buffer{}
-	cerr := bytes.Buffer{}
-	operator := bytes.Buffer{}
-	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
+	sinks, cout, cerr, operator := newSinks()
 	// NOTE: buildEnv never overwrites existing env. variable
 	_ = os.Setenv("RND", "DUMMYDATA")
 	kube := startHarness(options, sinks, nil)
@@ -286,12 +288,11 @@ $`, rnd, rnd, rnd, rnd)
 
 func TestStartNoCleanup(t *testing.T) {
 	// expect fail-close-cluster-stop to fail, should be skipped
-	options := *newOptions(DefaultPrefix("fail-close"), DefaultNoCleanup())
-	cout := bytes.Buffer{}
-	cerr := bytes.Buffer{}
-	operator := bytes.Buffer{}
-	sinks := Sinks{[]io.Writer{&cout}, []io.Writer{&cerr}, []io.Writer{&operator}}
-	// NOTE: buildEnv never overwrites existing env. variable
+	options := *newOptions(
+		DefaultPrefix("fail-close"),
+		DefaultNoCleanup(),
+	)
+	sinks, cout, cerr, operator := newSinks()
 	_ = os.Unsetenv("RND")
 	kube := startHarness(options, sinks, nil)
 	assert.NotNil(t, kube)
