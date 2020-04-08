@@ -24,10 +24,10 @@ itest-cluster-stop:
 	fi
 
 test-sleep05-foo:
-	@echo "test-sleep05-foo $${RND} $${TEST_OPERATOR_NS}"
+	@echo "test-sleep05-foo $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
 
 test-sleep05-bar:
-	@echo "test-sleep05-bar $${RND} $${TEST_OPERATOR_NS}, expected to raise an error"
+	@echo "test-sleep05-bar $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}, expected to raise an error"
 	false
 
 fail:
@@ -37,17 +37,17 @@ fail-close-cluster-stop:
 	$(error $*)
 
 test-sleep05-operator-start:
-	@echo "test-sleep05-operator-start $${RND} $${TEST_OPERATOR_NS}"
+	@echo "test-sleep05-operator-start $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
 	@sleep 0.5s
 
 %-operator-start:
-	@echo "$*-operator-start $${RND} $${TEST_OPERATOR_NS}"
+	@echo "$*-operator-start $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
 
 %-operator-stop:
-	@echo "$*-operator-stop $${RND} $${TEST_OPERATOR_NS}"
+	@echo "$*-operator-stop $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
 
 %-cleanup:
-	@echo "$*-cleanup $${RND} $${TEST_OPERATOR_NS}"
+	@echo "$*-cleanup $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
 
 %-env:
 	@echo "export RND=$$(xxd -l8 -p /dev/urandom)"

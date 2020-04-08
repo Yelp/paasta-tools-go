@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,7 +22,12 @@ import (
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type internalState struct {
+	testCounter uint32
+}
+
 type Harness struct {
+	internalState
 	harness.Harness
 	Options Options
 	Sinks   Sinks
@@ -45,6 +51,7 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 		Test:            *test,
 		operatorRunning: false,
 		harness:         h,
+		testCount:       atomic.AddUint32(&h.internalState.testCounter, 1),
 	}
 }
 
@@ -265,6 +272,7 @@ func startHarness(options Options, sinks Sinks, scheme* runtime.Scheme) *Harness
 	stopCluster(options, sinks)
 	startCluster(options, sinks)
 	return &Harness{
+		internalState: internalState{0},
 		Harness: *harness.New(options.Options),
 		Options: options,
 		Sinks:   sinks,
