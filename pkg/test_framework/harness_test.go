@@ -78,9 +78,9 @@ func TestSanitizePrefix(t *testing.T) {
 func TestRunNoOutput(t *testing.T) {
 	args := []string{"make", "-s", "-C", "tests", "default"}
 	_ = os.Setenv("RND", "BAZ")
-	err := run([]io.Writer{}, nil, args)
+	err := run([]io.Writer{}, nil, args, nil)
 	assert.NoError(t, err)
-	err = run(nil, []io.Writer{}, args)
+	err = run(nil, []io.Writer{}, args, nil)
 	assert.NoError(t, err)
 }
 
@@ -89,8 +89,8 @@ func TestRunSimple(t *testing.T) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	args := []string{"make", "-s", "-C", "tests", "default"}
-	_ = os.Setenv("RND", "BAZ")
-	err := run([]io.Writer{&cout}, []io.Writer{&cerr}, args)
+	envs := map[string]string{"RND": "BAZ"}
+	err := run([]io.Writer{&cout}, []io.Writer{&cerr}, args, envs)
 	assert.NoError(t, err)
 	assert.Equal(t, "default BAZ\n", cout.String())
 	assert.Empty(t, cerr.String())
@@ -217,9 +217,9 @@ func TestCheckAll(t *testing.T) {
 	assert.Regexp(t, `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
-echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -249,9 +249,9 @@ func TestCheckNoCleanup(t *testing.T) {
 	checkMakefile(options, sinks)
 	assert.Regexp(t, `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
-echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
 $`, cout.String())
 	assert.Empty(t, cerr.String())
 	assert.Empty(t, operator.String())
@@ -270,9 +270,9 @@ func TestStart(t *testing.T) {
 	cmp := `^echo "export RND=.*
 echo "tests-cluster-start \$\{RND\}"
 echo "tests-cluster-stop \$\{RND\}"
-echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "tests-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "tests-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "tests-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
 `
 	err := kube.Close()
 	assert.NoError(t, err)
@@ -300,9 +300,9 @@ func TestStartNoCleanup(t *testing.T) {
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
 echo "fail-close-cluster-start \$\{RND\}"
-echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\}"
-echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\}"
+echo "fail-close-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "fail-close-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "fail-close-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
 `
 	err := kube.Close()
 	assert.NoError(t, err)
