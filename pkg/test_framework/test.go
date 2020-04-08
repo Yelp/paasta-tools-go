@@ -18,6 +18,7 @@ type Test struct {
 
 	operatorRunning bool
 	harness         *Harness
+	testCount       uint32
 }
 
 func (t *Test) Setup() *Test {
@@ -26,6 +27,7 @@ func (t *Test) Setup() *Test {
 		_ = t.Test.Setup()
 	}
 	_ = os.Setenv("TEST_OPERATOR_NS", t.Namespace)
+	_ = os.Setenv("TEST_COUNT", fmt.Sprintf("%d", t.testCount))
 	return t
 }
 
@@ -60,6 +62,7 @@ func (t *Test) Close() {
 	// If panicking, let Test.Close() do its thing only and keep the operator running
 	defer func () {
 		_ = os.Unsetenv("TEST_OPERATOR_NS")
+		_ = os.Unsetenv("TEST_COUNT")
 		t.Test.Close()
 	}()
 	if r := recover(); r != nil {
