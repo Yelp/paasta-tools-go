@@ -3,7 +3,6 @@ package framework
 import (
 	"fmt"
 	"log"
-	"os"
 	"os/exec"
 	"sync"
 	"sync/atomic"
@@ -19,6 +18,7 @@ type Test struct {
 	operatorRunning bool
 	harness         *Harness
 	testCount       uint32
+	envs            map[string]string
 }
 
 func (t *Test) Setup() *Test {
@@ -26,8 +26,8 @@ func (t *Test) Setup() *Test {
 	if t.harness.Harness.KubeClient() != nil {
 		_ = t.Test.Setup()
 	}
-	_ = os.Setenv("TEST_OPERATOR_NS", t.Namespace)
-	_ = os.Setenv("TEST_COUNT", fmt.Sprintf("%d", t.testCount))
+	t.envs["TEST_OPERATOR_NS"] = t.Namespace
+	t.envs["TEST_COUNT"] = fmt.Sprintf("%d", t.testCount)
 	return t
 }
 
@@ -35,7 +35,7 @@ func (t *Test) StartOperator() error {
 	if t.operatorRunning == true {
 		return fmt.Errorf("operator already started")
 	}
-	err := startOperator(t.harness.Options, t.harness.Sinks)
+	err := startOperator(t.harness.Options, t.harness.Sinks, t.envs)
 	if err == nil {
 		t.operatorRunning = true
 	}
@@ -44,13 +44,13 @@ func (t *Test) StartOperator() error {
 
 func (t *Test) StopOperator() {
 	if t.operatorRunning {
-		stopOperator(t.harness.Options, t.harness.Sinks)
+		stopOperator(t.harness.Options, t.harness.Sinks, t.envs)
 		t.operatorRunning = false
 	}
 }
 
 func (t *Test) RunTarget(name string) error {
-	return runTarget(t.harness.Options, t.harness.Sinks, name)
+	return runTarget(t.harness.Options, t.harness.Sinks, name, t.envs)
 }
 
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
@@ -61,15 +61,13 @@ func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 func (t *Test) Close() {
 	// If panicking, let Test.Close() do its thing only and keep the operator running
 	defer func () {
-		_ = os.Unsetenv("TEST_OPERATOR_NS")
-		_ = os.Unsetenv("TEST_COUNT")
 		t.Test.Close()
 	}()
 	if r := recover(); r != nil {
 		panic(r)
 	} else {
 		t.StopOperator()
-		cleanup(t.harness.Options, t.harness.Sinks)
+		cleanup(t.harness.Options, t.harness.Sinks, t.envs)
 	}
 }
 
@@ -147,30 +145,30 @@ func(h* asynchronousHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
 	}
 }
 
-func startOperator(options Options, sinks Sinks) error {
+func startOperator(options Options, sinks Sinks, envs map[string]string) error {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStart()}
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
 	handler := asynchronousHandler{options.OperatorDelay, nil}
-	if err := start(&handler, sinks.Operator,  nil, args); err != nil {
+	if err := start(&handler, sinks.Operator,  nil, args, envs); err != nil {
 		return err
 	}
 	return handler.result
 }
 
-func stopOperator(options Options, sinks Sinks) {
+func stopOperator(options Options, sinks Sinks, envs map[string]string) {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.operatorStop()}
 	log.Printf("Running %v ...", args)
 	// allow for errors here
-	_ = run(sinks.Stdout, sinks.Stderr, args)
+	_ = run(sinks.Stdout, sinks.Stderr, args, envs)
 	log.Print("... done")
 }
 
-func cleanup(options Options, sinks Sinks) {
+func cleanup(options Options, sinks Sinks, envs map[string]string) {
 	if options.NoCleanup {
 		log.Printf("Keeping the test objects")
 		return
@@ -180,18 +178,18 @@ func cleanup(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.cleanup()}
 	log.Printf("Running %v ...", args)
 	// allow for errors here
-	_ = run(sinks.Stdout, sinks.Stderr, args)
+	_ = run(sinks.Stdout, sinks.Stderr, args, envs)
 	log.Print("... done")
 }
 
-func runTarget(options Options, sinks Sinks, name string) error {
+func runTarget(options Options, sinks Sinks, name string, envs map[string]string) error {
 	makefile := options.Makefile
 	makedir := options.MakeDir
 	target := options.Prefix + name
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, target}
 	log.Printf("Running %v ...", args)
 	// allow for errors here
-	err := run(sinks.Stdout, sinks.Stderr, args)
+	err := run(sinks.Stdout, sinks.Stderr, args, envs)
 	if err == nil {
 		log.Print("... done")
 	} else {
