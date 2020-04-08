@@ -52,6 +52,7 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 		operatorRunning: false,
 		harness:         h,
 		testCount:       atomic.AddUint32(&h.internalState.testCounter, 1),
+		envs:            map[string]string{},
 	}
 }
 
@@ -287,7 +288,7 @@ func checkMakefile(options Options, sinks Sinks) {
 	check := func(target string) {
 		args := []string{"make", "-s", "-f", makefile, "-C", makedir, "--dry-run", target}
 		log.Printf("Checking %v ...", args)
-		err := run(sinks.Stdout, sinks.Stderr, args)
+		err := run(sinks.Stdout, sinks.Stderr, args, nil)
 		if err != nil {
 			log.Panicf("error checking target %s: %v", target, err)
 		} else {
@@ -323,7 +324,7 @@ func buildEnv(options Options, sinks Sinks) {
 	// clone sinks.Stdout and add exports
 	cout := append([]io.Writer{}, sinks.Stdout...)
 	cout = append(cout, &exports)
-	err := run(cout, sinks.Stderr, args)
+	err := run(cout, sinks.Stderr, args, nil)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -349,7 +350,7 @@ func startCluster(options Options, sinks Sinks) {
 	makedir := options.MakeDir
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStart()}
 	log.Printf("Running %v ...", args)
-	err := run(sinks.Stdout, sinks.Stderr, args)
+	err := run(sinks.Stdout, sinks.Stderr, args, nil)
 	if err != nil {
 		log.Panic(err)
 	}
@@ -371,6 +372,6 @@ func stopCluster(options Options, sinks Sinks) {
 	args := []string{"make", "-s", "-f", makefile, "-C", makedir, options.clusterStop()}
 	log.Printf("Running %v ...", args)
 	// if this fails that's perfectly OK - the cluster might not have been running!
-	_ = run(sinks.Stdout, sinks.Stderr, args)
+	_ = run(sinks.Stdout, sinks.Stderr, args, nil)
 	log.Print("... done")
 }

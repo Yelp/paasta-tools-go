@@ -20,12 +20,8 @@ func TestStartQuick(t *testing.T) {
 	err := test.StartOperator()
 	// error because make tests-operator-start is not blocking
 	assert.NotNil(t, err)
-	ns, nset := os.LookupEnv("TEST_OPERATOR_NS")
-	assert.Equal(t,true, nset)
-	assert.Equal(t, test.Namespace, ns)
-	_, nset = os.LookupEnv("TEST_COUNT")
-	assert.Equal(t,true, nset)
 
+	ns := test.Namespace
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
@@ -65,23 +61,12 @@ func TestStartSlowNoCleanup(t *testing.T) {
 	// this will block long enough to register "operator running"
 	err := test.StartOperator()
 	assert.NoError(t, err)
-	ns, nset := os.LookupEnv("TEST_OPERATOR_NS")
-	assert.Equal(t, true, nset)
-	assert.Equal(t, test.Namespace, ns)
-	count1, nset := os.LookupEnv("TEST_COUNT")
-	assert.Equal(t,true, nset)
-	assert.Equal(t, "1", count1)
 
 	err = test.StartOperator()
 	// operator already started
 	assert.NotNil(t, err)
-	ns, nset = os.LookupEnv("TEST_OPERATOR_NS")
-	assert.Equal(t, true, nset)
-	assert.Equal(t, test.Namespace, ns)
-	count2, nset := os.LookupEnv("TEST_COUNT")
-	assert.Equal(t,true, nset)
-	assert.Equal(t, "1", count2)
 
+	ns := test.Namespace
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
@@ -120,12 +105,8 @@ func TestStartSlowWithCleanup(t *testing.T) {
 	// this will block long enough to register "operator running"
 	err := test.StartOperator()
 	assert.NoError(t, err)
-	ns, nset := os.LookupEnv("TEST_OPERATOR_NS")
-	assert.Equal(t, true, nset)
-	assert.Equal(t, test.Namespace, ns)
-	_, nset = os.LookupEnv("TEST_COUNT")
-	assert.Equal(t,true, nset)
 
+	ns := test.Namespace
 	rnd, ok := os.LookupEnv("RND")
 	assert.Equal(t, true, ok)
 	cmp := `^echo "export RND=.*
@@ -147,10 +128,6 @@ $`, rnd, rnd, rnd, rnd, ns, rnd, ns, rnd)
 	test.Close()
 	err = kube.Close()
 	assert.NoError(t, err)
-	_, nset = os.LookupEnv("TEST_OPERATOR_NS")
-	assert.Equal(t, false, nset)
-	_, nset = os.LookupEnv("TEST_COUNT")
-	assert.Equal(t, false, nset)
 
 	assert.Regexp(t, cmp, cout.String())
 	// stdout output of the operator goes to the operator sink

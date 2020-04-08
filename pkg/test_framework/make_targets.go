@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 )
 
@@ -49,6 +50,29 @@ type Handler interface {
 	Handle(cmd *exec.Cmd, wg *sync.WaitGroup)
 }
 
+// Append envs to os.Environ(), taking care to override existing env. variables
+func envAppend(envs map[string]string) []string {
+	env := os.Environ()
+	if len(envs) == 0 {
+		return env // Nothing to do here!
+	}
+
+	// Overwrite existing entries in env first ...
+	for i, e := range env {
+		str := strings.Split(e, "=")
+		key := str[0]
+		if val, ok := envs[key]; ok {
+			env[i] = key + "=" + val
+			delete(envs, key)
+		}
+	}
+	// ... then append new entries
+	for key, val := range envs {
+		env = append(env, key + "=" + val)
+	}
+	return env
+}
+
 // General purpose wrapper for "exec.Command().Start()". It can be used to:
 // * read Stdout both with outSink and sinks (and perhaps parse it)
 // * read Stderr with sinks (ditto)
@@ -57,8 +81,9 @@ type Handler interface {
 // No logging occurs inside this function. This function will block until
 // all 3 functors have finished, so for truly asynchronous execution you
 // may want to spawn goroutines inside each.
-func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []string) error {
+func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []string, envs map[string]string) error {
 	cmd := exec.Command(args[0], args[1:]...)
+	cmd.Env = envAppend(envs)
 	outPipe, err := cmd.StdoutPipe()
 	if err != nil {
 		return err
@@ -123,9 +148,9 @@ func(h *blockingHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
 
 // Wrapper for start() function, more specialized synchronous executor
 // similar to exec.Command().Run()
-func run(outSinks []io.Writer, errSinks []io.Writer, args []string) error {
+func run(outSinks []io.Writer, errSinks []io.Writer, args []string, envs map[string]string) error {
 	handler := blockingHandler{}
-	if err := start(&handler, outSinks, errSinks, args); err != nil {
+	if err := start(&handler, outSinks, errSinks, args, envs); err != nil {
 		return err
 	}
 	return handler.result

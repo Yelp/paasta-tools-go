@@ -78,9 +78,9 @@ func TestSanitizePrefix(t *testing.T) {
 func TestRunNoOutput(t *testing.T) {
 	args := []string{"make", "-s", "-C", "tests", "default"}
 	_ = os.Setenv("RND", "BAZ")
-	err := run([]io.Writer{}, nil, args)
+	err := run([]io.Writer{}, nil, args, nil)
 	assert.NoError(t, err)
-	err = run(nil, []io.Writer{}, args)
+	err = run(nil, []io.Writer{}, args, nil)
 	assert.NoError(t, err)
 }
 
@@ -89,8 +89,8 @@ func TestRunSimple(t *testing.T) {
 	cout := bytes.Buffer{}
 	cerr := bytes.Buffer{}
 	args := []string{"make", "-s", "-C", "tests", "default"}
-	_ = os.Setenv("RND", "BAZ")
-	err := run([]io.Writer{&cout}, []io.Writer{&cerr}, args)
+	envs := map[string]string{"RND": "BAZ"}
+	err := run([]io.Writer{&cout}, []io.Writer{&cerr}, args, envs)
 	assert.NoError(t, err)
 	assert.Equal(t, "default BAZ\n", cout.String())
 	assert.Empty(t, cerr.String())
