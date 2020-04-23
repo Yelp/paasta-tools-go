@@ -40,7 +40,7 @@ func unexpectedfileExists(test *testing.T) func(path string) (bool, error) {
 func TestStore_loadPath(test *testing.T) {
 	key := "test key"
 	s := &Store{
-		Data: sync.Map{},
+		Data: &sync.Map{},
 		ParseFile: func(file string, val interface{}) error {
 			v, ok := val.(map[string]interface{})
 			if !ok {
@@ -66,7 +66,7 @@ func TestStore_loadPath(test *testing.T) {
 func TestStore_loadAll(test *testing.T) {
 	s := &Store{
 		Dir:  "zero",
-		Data: sync.Map{},
+		Data: &sync.Map{},
 		ParseFile: func(file string, val interface{}) error {
 			fmt.Printf("parse file called: %s\n", file)
 			v, ok := val.(map[string]interface{})
@@ -96,7 +96,7 @@ func TestStore_loadAll(test *testing.T) {
 func TestStore_load(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      sync.Map{},
+		Data:      &sync.Map{},
 		ParseFile: func(file string, val interface{}) error { return nil },
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
@@ -118,7 +118,7 @@ func TestStore_load(test *testing.T) {
 func TestStore_Get(test *testing.T) {
 	s := &Store{
 		Dir:       "zero",
-		Data:      sync.Map{},
+		Data:      &sync.Map{},
 		ParseFile: unexpectedParseFile(test),
 		ListFiles: unexpectedListFiles(test),
 		FileExists: func(path string) (bool, error) {
