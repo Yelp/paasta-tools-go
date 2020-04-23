@@ -45,3 +45,12 @@ deb_%: clean docker_build_%
 
 itest_%: deb_%
 	@echo "Built package for $*"
+
+gen-paasta-api:
+	docker run \
+		--rm \
+		-it \
+		-e GOPATH=$$HOME/go:/go \
+		-v $$HOME:$$HOME \
+		-w $$(pwd) quay.io/goswagger/swagger \
+		generate client -f ./swagger.json -t pkg/paasta_api

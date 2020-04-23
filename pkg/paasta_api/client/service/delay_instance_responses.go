@@ -10,10 +10,9 @@ import (
 	"io"
 
 	"github.com/go-openapi/runtime"
+	"github.com/go-openapi/strfmt"
 
-	strfmt "github.com/go-openapi/strfmt"
-
-	models "github.com/Yelp/paasta-tools-go/pkg/paasta_api/models"
+	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/models"
 )
 
 // DelayInstanceReader is a Reader for the DelayInstance structure.
