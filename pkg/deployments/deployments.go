@@ -96,7 +96,7 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
 	dockerRegistry := &DockerRegistry{Registry: ""}
-	err := provider.PaastaConfig.Load("registry", &dockerRegistry.Registry)
+	err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
 	return dockerRegistry.Registry, err
 }
 
