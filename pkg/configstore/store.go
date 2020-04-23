@@ -15,7 +15,7 @@ import (
 // Store holds config data
 type Store struct {
 	// If you care about sanity, never write here, just read
-	Data  sync.Map
+	Data  *sync.Map
 	Dir   string
 	Hints map[string]string
 	sync.Mutex
@@ -69,6 +69,7 @@ func NewStore(dir string, hints map[string]string) *Store {
 		hints = map[string]string{}
 	}
 	return &Store{
+		Data:       &sync.Map{},
 		Dir:        dir,
 		Hints:      hints,
 		ListFiles:  listFiles,
