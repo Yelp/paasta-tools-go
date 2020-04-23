@@ -1,3 +1,6 @@
+// Package configstore provides an object to fetch config data from disk
+// according to PaaSTA conventions. Loaded values are cached to avoid repeated
+// disk access. For more details, see docs for `configstore.Store`.
 package configstore
 
 import (
@@ -12,9 +15,30 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
-// Store holds config data
+// Store is a container that fetches and caches config values from disk and
+// destructures them into PaaSTA value structures.
+//
+// `Store` object will mimic config loading from original paasta-tools, which
+// works as following for `store.Get("foo")` call:
+//
+// 1. look on disk for file `foo.json` or `foo.yaml`
+// 2. if file exists, load it and fetch `foo` key from top-level dictionary
+// 3. if file is missing, load all `.json` or `.yaml` files and merge them
+//    into single dictionary and look for `foo` key in there
+//
+// To avoid eagerly loading all existing configuration files, `Store` object
+// accepts optional `hints` dictionary, with mapping from keys to file paths,
+// where to look for those keys. If requested key is missing from hints, it will
+// trigger eager loading as per default functionality.
+//
+// There are two ways to get config data, via `Get` or `Load` methods. `Get`
+// will parse the config value and return it as `interface{}` type, while `Load`
+// will accept destination pointer and use `mapstructure.Decode` to destructure
+// the value.
+//
+// TODO: since `Store` is meant to be a long-lived object we need to keep track
+//       of updated configs and a possibility to manually reset the cache.
 type Store struct {
-	// If you care about sanity, never write here, just read
 	Data  *sync.Map
 	Dir   string
 	Hints map[string]string
@@ -28,7 +52,7 @@ type Store struct {
 func listFiles(dirname string) ([]string, error) {
 	files, err := ioutil.ReadDir(dirname)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to list directory %v: %v", dirname, err)
 	}
 
 	ret := make([]string, len(files))
