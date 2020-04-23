@@ -7,7 +7,7 @@ import (
 	flag "github.com/spf13/pflag"
 
 	"github.com/Yelp/paasta-tools-go/pkg/cli"
-	"github.com/Yelp/paasta-tools-go/pkg/config_store"
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 // PaastaMetastatusOptions ...
@@ -39,8 +39,10 @@ func metastatus(opts *PaastaMetastatusOptions) error {
 			opts.Verbosity = 2
 		}
 	}
-	sysStore := config_store.NewStore(opts.SysDir, nil)
-	apiEndpoints, err := sysStore.Get("api_endpoints")
+	sysStore := configstore.NewStore(opts.SysDir, nil)
+
+	var apiEndpoints map[string]interface{}
+	err := sysStore.Load("api_endpoints", &apiEndpoints)
 	if err != nil {
 		return err
 	}
@@ -49,11 +51,13 @@ func metastatus(opts *PaastaMetastatusOptions) error {
 	if opts.Cluster != "" {
 		clusters = []interface{}{opts.Cluster}
 	} else {
-		clusters, err := sysStore.Get("clusters")
+		err := sysStore.Load("clusters", &clusters)
 		if err != nil {
 			return err
 		}
 	}
+
+	fmt.Printf("api endpoints: %+v\nclusters: %+v\n", apiEndpoints, clusters)
 
 	return nil
 }
