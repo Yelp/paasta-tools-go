@@ -50,6 +50,9 @@ type InstanceStatusMarathon struct {
 	// Enum: [start stop]
 	DesiredState *string `json:"desired_state"`
 
+	// Status of the service in Envoy
+	Envoy *EnvoyStatus `json:"envoy,omitempty"`
+
 	// Error message when a marathon job ID cannot be found
 	ErrorMessage string `json:"error_message,omitempty"`
 
@@ -91,6 +94,10 @@ func (m *InstanceStatusMarathon) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateDesiredState(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateEnvoy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -305,6 +312,24 @@ func (m *InstanceStatusMarathon) validateDesiredState(formats strfmt.Registry) e
 	// value enum
 	if err := m.validateDesiredStateEnum("desired_state", "body", *m.DesiredState); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *InstanceStatusMarathon) validateEnvoy(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Envoy) { // not required
+		return nil
+	}
+
+	if m.Envoy != nil {
+		if err := m.Envoy.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("envoy")
+			}
+			return err
+		}
 	}
 
 	return nil

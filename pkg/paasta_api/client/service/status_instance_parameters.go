@@ -61,6 +61,11 @@ for the status instance operation typically these are written to a http.Request
 */
 type StatusInstanceParams struct {
 
+	/*IncludeEnvoy
+	  Include Envoy information
+
+	*/
+	IncludeEnvoy *bool
 	/*IncludeMesos
 	  Include Mesos information
 
@@ -125,6 +130,17 @@ func (o *StatusInstanceParams) SetHTTPClient(client *http.Client) {
 	o.HTTPClient = client
 }
 
+// WithIncludeEnvoy adds the includeEnvoy to the status instance params
+func (o *StatusInstanceParams) WithIncludeEnvoy(includeEnvoy *bool) *StatusInstanceParams {
+	o.SetIncludeEnvoy(includeEnvoy)
+	return o
+}
+
+// SetIncludeEnvoy adds the includeEnvoy to the status instance params
+func (o *StatusInstanceParams) SetIncludeEnvoy(includeEnvoy *bool) {
+	o.IncludeEnvoy = includeEnvoy
+}
+
 // WithIncludeMesos adds the includeMesos to the status instance params
 func (o *StatusInstanceParams) WithIncludeMesos(includeMesos *bool) *StatusInstanceParams {
 	o.SetIncludeMesos(includeMesos)
@@ -187,6 +203,22 @@ func (o *StatusInstanceParams) WriteToRequest(r runtime.ClientRequest, reg strfm
 		return err
 	}
 	var res []error
+
+	if o.IncludeEnvoy != nil {
+
+		// query param include_envoy
+		var qrIncludeEnvoy bool
+		if o.IncludeEnvoy != nil {
+			qrIncludeEnvoy = *o.IncludeEnvoy
+		}
+		qIncludeEnvoy := swag.FormatBool(qrIncludeEnvoy)
+		if qIncludeEnvoy != "" {
+			if err := r.SetQueryParam("include_envoy", qIncludeEnvoy); err != nil {
+				return err
+			}
+		}
+
+	}
 
 	if o.IncludeMesos != nil {
 

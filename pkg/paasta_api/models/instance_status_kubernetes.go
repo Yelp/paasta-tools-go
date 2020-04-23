@@ -27,6 +27,9 @@ type InstanceStatusKubernetes struct {
 	// ID of the desired version of a service instance
 	AppID string `json:"app_id,omitempty"`
 
+	// autoscaling status
+	AutoscalingStatus *InstanceStatusKubernetesAutoscalingStatus `json:"autoscaling_status,omitempty"`
+
 	// backoff in seconds before launching the next task
 	BackoffSeconds int32 `json:"backoff_seconds,omitempty"`
 
@@ -41,6 +44,9 @@ type InstanceStatusKubernetes struct {
 	// Deploy status of a Kubernetes service
 	// Enum: [Running Deploying Stopped Delayed Waiting NotRunning]
 	DeployStatus string `json:"deploy_status,omitempty"`
+
+	// Reason for the deploy status
+	DeployStatusMessage string `json:"deploy_status_message,omitempty"`
 
 	// Desired state of a service, for Kubernetes
 	// Required: true
@@ -74,6 +80,10 @@ func (m *InstanceStatusKubernetes) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateAppCount(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateAutoscalingStatus(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -111,6 +121,24 @@ func (m *InstanceStatusKubernetes) validateAppCount(formats strfmt.Registry) err
 
 	if err := validate.Required("app_count", "body", m.AppCount); err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (m *InstanceStatusKubernetes) validateAutoscalingStatus(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.AutoscalingStatus) { // not required
+		return nil
+	}
+
+	if m.AutoscalingStatus != nil {
+		if err := m.AutoscalingStatus.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("autoscaling_status")
+			}
+			return err
+		}
 	}
 
 	return nil
@@ -342,6 +370,84 @@ func (m *InstanceStatusKubernetes) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *InstanceStatusKubernetes) UnmarshalBinary(b []byte) error {
 	var res InstanceStatusKubernetes
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// InstanceStatusKubernetesAutoscalingStatus HPA associated to this app
+//
+// swagger:model InstanceStatusKubernetesAutoscalingStatus
+type InstanceStatusKubernetesAutoscalingStatus struct {
+
+	// desired number of _instances as calculated by HPA
+	DesiredReplicas int64 `json:"desired_replicas,omitempty"`
+
+	// timestamp of last autoscale
+	LastScaleTime string `json:"last_scale_time,omitempty"`
+
+	// min_instances as specified in yelpsoa_configs
+	MaxInstances int64 `json:"max_instances,omitempty"`
+
+	// Current metrics
+	Metrics []*HPAMetric `json:"metrics"`
+
+	// min_instances as specified in yelpsoa_configs
+	MinInstances int64 `json:"min_instances,omitempty"`
+}
+
+// Validate validates this instance status kubernetes autoscaling status
+func (m *InstanceStatusKubernetesAutoscalingStatus) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateMetrics(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *InstanceStatusKubernetesAutoscalingStatus) validateMetrics(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Metrics) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Metrics); i++ {
+		if swag.IsZero(m.Metrics[i]) { // not required
+			continue
+		}
+
+		if m.Metrics[i] != nil {
+			if err := m.Metrics[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("autoscaling_status" + "." + "metrics" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *InstanceStatusKubernetesAutoscalingStatus) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *InstanceStatusKubernetesAutoscalingStatus) UnmarshalBinary(b []byte) error {
+	var res InstanceStatusKubernetesAutoscalingStatus
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
