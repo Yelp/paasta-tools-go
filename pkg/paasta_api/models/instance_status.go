@@ -6,13 +6,13 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 import (
-	strfmt "github.com/go-openapi/strfmt"
-
 	"github.com/go-openapi/errors"
+	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
 
 // InstanceStatus instance status
+//
 // swagger:model InstanceStatus
 type InstanceStatus struct {
 
@@ -178,6 +178,7 @@ func (m *InstanceStatus) UnmarshalBinary(b []byte) error {
 }
 
 // InstanceStatusFlink Nullable Flink instance status and metadata
+//
 // swagger:model InstanceStatusFlink
 type InstanceStatusFlink struct {
 

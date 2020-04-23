@@ -6,5 +6,6 @@ package models
 // Editing this file might prove futile when you re-run the swagger generate command
 
 // InstanceMetadataFlink Flink instance metadata
+//
 // swagger:model InstanceMetadataFlink
 type InstanceMetadataFlink interface{}

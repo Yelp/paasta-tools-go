@@ -47,13 +47,10 @@ itest_%: deb_%
 	@echo "Built package for $*"
 
 gen-paasta-api:
-	rm -rf pkg/paasta_api/*
-	curl -o swagger.json https://raw.githubusercontent.com/Yelp/paasta/master/paasta_tools/api/api_docs/swagger.json
 	docker run \
-		--rm -it \
-		--user "$$(id -u):$$(id -g)" \
+		--rm \
+		-it \
 		-e GOPATH=$$HOME/go:/go \
 		-v $$HOME:$$HOME \
 		-w $$(pwd) quay.io/goswagger/swagger \
 		generate client -f ./swagger.json -t pkg/paasta_api
-	@echo "Do not forget to `git add` and `git commit` updated swagger.json and paasta-api"

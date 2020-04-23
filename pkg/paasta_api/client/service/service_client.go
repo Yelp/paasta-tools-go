@@ -9,12 +9,11 @@ import (
 	"fmt"
 
 	"github.com/go-openapi/runtime"
-
-	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new service API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) *Client {
+func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
@@ -26,8 +25,27 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
+// ClientService is the interface for Client methods
+type ClientService interface {
+	DelayInstance(params *DelayInstanceParams) (*DelayInstanceOK, *DelayInstanceNoContent, error)
+
+	InstanceSetState(params *InstanceSetStateParams) (*InstanceSetStateOK, error)
+
+	ListInstances(params *ListInstancesParams) (*ListInstancesOK, error)
+
+	ListServicesForCluster(params *ListServicesForClusterParams) (*ListServicesForClusterOK, error)
+
+	StatusInstance(params *StatusInstanceParams) (*StatusInstanceOK, error)
+
+	TaskInstance(params *TaskInstanceParams) (*TaskInstanceOK, error)
+
+	TasksInstance(params *TasksInstanceParams) (*TasksInstanceOK, error)
+
+	SetTransport(transport runtime.ClientTransport)
+}
+
 /*
-DelayInstance gets the possible reasons for a deployment delay for a marathon service instance
+  DelayInstance gets the possible reasons for a deployment delay for a marathon service instance
 */
 func (a *Client) DelayInstance(params *DelayInstanceParams) (*DelayInstanceOK, *DelayInstanceNoContent, error) {
 	// TODO: Validate the params before sending
@@ -62,7 +80,7 @@ func (a *Client) DelayInstance(params *DelayInstanceParams) (*DelayInstanceOK, *
 }
 
 /*
-InstanceSetState changes state of service name instance name
+  InstanceSetState changes state of service name instance name
 */
 func (a *Client) InstanceSetState(params *InstanceSetStateParams) (*InstanceSetStateOK, error) {
 	// TODO: Validate the params before sending
@@ -96,7 +114,7 @@ func (a *Client) InstanceSetState(params *InstanceSetStateParams) (*InstanceSetS
 }
 
 /*
-ListInstances lists instances of service name
+  ListInstances lists instances of service name
 */
 func (a *Client) ListInstances(params *ListInstancesParams) (*ListInstancesOK, error) {
 	// TODO: Validate the params before sending
@@ -130,7 +148,7 @@ func (a *Client) ListInstances(params *ListInstancesParams) (*ListInstancesOK, e
 }
 
 /*
-ListServicesForCluster lists service names and service instance names on the current cluster
+  ListServicesForCluster lists service names and service instance names on the current cluster
 */
 func (a *Client) ListServicesForCluster(params *ListServicesForClusterParams) (*ListServicesForClusterOK, error) {
 	// TODO: Validate the params before sending
@@ -164,7 +182,7 @@ func (a *Client) ListServicesForCluster(params *ListServicesForClusterParams) (*
 }
 
 /*
-StatusInstance gets status of service name instance name
+  StatusInstance gets status of service name instance name
 */
 func (a *Client) StatusInstance(params *StatusInstanceParams) (*StatusInstanceOK, error) {
 	// TODO: Validate the params before sending
@@ -198,7 +216,7 @@ func (a *Client) StatusInstance(params *StatusInstanceParams) (*StatusInstanceOK
 }
 
 /*
-TaskInstance gets mesos task of service name instance name by task id
+  TaskInstance gets mesos task of service name instance name by task id
 */
 func (a *Client) TaskInstance(params *TaskInstanceParams) (*TaskInstanceOK, error) {
 	// TODO: Validate the params before sending
@@ -232,7 +250,7 @@ func (a *Client) TaskInstance(params *TaskInstanceParams) (*TaskInstanceOK, erro
 }
 
 /*
-TasksInstance gets mesos tasks of service name instance name
+  TasksInstance gets mesos tasks of service name instance name
 */
 func (a *Client) TasksInstance(params *TasksInstanceParams) (*TasksInstanceOK, error) {
 	// TODO: Validate the params before sending

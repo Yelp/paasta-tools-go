@@ -9,12 +9,11 @@ import (
 	"fmt"
 
 	"github.com/go-openapi/runtime"
-
-	strfmt "github.com/go-openapi/strfmt"
+	"github.com/go-openapi/strfmt"
 )
 
 // New creates a new autoscaler API client.
-func New(transport runtime.ClientTransport, formats strfmt.Registry) *Client {
+func New(transport runtime.ClientTransport, formats strfmt.Registry) ClientService {
 	return &Client{transport: transport, formats: formats}
 }
 
@@ -26,8 +25,17 @@ type Client struct {
 	formats   strfmt.Registry
 }
 
+// ClientService is the interface for Client methods
+type ClientService interface {
+	GetAutoscalerCount(params *GetAutoscalerCountParams) (*GetAutoscalerCountOK, error)
+
+	UpdateAutoscalerCount(params *UpdateAutoscalerCountParams) (*UpdateAutoscalerCountAccepted, error)
+
+	SetTransport(transport runtime.ClientTransport)
+}
+
 /*
-GetAutoscalerCount gets status of service name instance name
+  GetAutoscalerCount gets status of service name instance name
 */
 func (a *Client) GetAutoscalerCount(params *GetAutoscalerCountParams) (*GetAutoscalerCountOK, error) {
 	// TODO: Validate the params before sending
@@ -61,7 +69,7 @@ func (a *Client) GetAutoscalerCount(params *GetAutoscalerCountParams) (*GetAutos
 }
 
 /*
-UpdateAutoscalerCount gets status of service name instance name
+  UpdateAutoscalerCount gets status of service name instance name
 */
 func (a *Client) UpdateAutoscalerCount(params *UpdateAutoscalerCountParams) (*UpdateAutoscalerCountAccepted, error) {
 	// TODO: Validate the params before sending
