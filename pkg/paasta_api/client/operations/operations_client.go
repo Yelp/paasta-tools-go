@@ -29,6 +29,8 @@ type Client struct {
 type ClientService interface {
 	DeleteServiceAutoscalerPause(params *DeleteServiceAutoscalerPauseParams) (*DeleteServiceAutoscalerPauseOK, error)
 
+	DeployQueue(params *DeployQueueParams) (*DeployQueueOK, error)
+
 	GetServiceAutoscalerPause(params *GetServiceAutoscalerPauseParams) (*GetServiceAutoscalerPauseOK, error)
 
 	Metastatus(params *MetastatusParams) (*MetastatusOK, error)
@@ -71,6 +73,40 @@ func (a *Client) DeleteServiceAutoscalerPause(params *DeleteServiceAutoscalerPau
 	// unexpected success response
 	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
 	msg := fmt.Sprintf("unexpected success response for delete_service_autoscaler_pause: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+  DeployQueue gets deploy queue contents
+*/
+func (a *Client) DeployQueue(params *DeployQueueParams) (*DeployQueueOK, error) {
+	// TODO: Validate the params before sending
+	if params == nil {
+		params = NewDeployQueueParams()
+	}
+
+	result, err := a.transport.Submit(&runtime.ClientOperation{
+		ID:                 "deploy_queue",
+		Method:             "GET",
+		PathPattern:        "/deploy_queue",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/x-www-form-urlencoded"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &DeployQueueReader{formats: a.formats},
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	})
+	if err != nil {
+		return nil, err
+	}
+	success, ok := result.(*DeployQueueOK)
+	if ok {
+		return success, nil
+	}
+	// unexpected success response
+	// safeguard: normally, absent a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for deploy_queue: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

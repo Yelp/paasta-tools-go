@@ -28,6 +28,9 @@ type InstanceStatus struct {
 	// Instance name
 	Instance string `json:"instance,omitempty"`
 
+	// kafkacluster
+	Kafkacluster *InstanceStatusKafkacluster `json:"kafkacluster,omitempty"`
+
 	// Kubernetes instance status
 	Kubernetes *InstanceStatusKubernetes `json:"kubernetes,omitempty"`
 
@@ -50,6 +53,10 @@ func (m *InstanceStatus) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateFlink(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateKafkacluster(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -97,6 +104,24 @@ func (m *InstanceStatus) validateFlink(formats strfmt.Registry) error {
 		if err := m.Flink.Validate(formats); err != nil {
 			if ve, ok := err.(*errors.Validation); ok {
 				return ve.ValidateName("flink")
+			}
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (m *InstanceStatus) validateKafkacluster(formats strfmt.Registry) error {
+
+	if swag.IsZero(m.Kafkacluster) { // not required
+		return nil
+	}
+
+	if m.Kafkacluster != nil {
+		if err := m.Kafkacluster.Validate(formats); err != nil {
+			if ve, ok := err.(*errors.Validation); ok {
+				return ve.ValidateName("kafkacluster")
 			}
 			return err
 		}
@@ -232,6 +257,41 @@ func (m *InstanceStatusFlink) MarshalBinary() ([]byte, error) {
 // UnmarshalBinary interface implementation
 func (m *InstanceStatusFlink) UnmarshalBinary(b []byte) error {
 	var res InstanceStatusFlink
+	if err := swag.ReadJSON(b, &res); err != nil {
+		return err
+	}
+	*m = res
+	return nil
+}
+
+// InstanceStatusKafkacluster Nullable KafkaCluster instance status and metadata
+//
+// swagger:model InstanceStatusKafkacluster
+type InstanceStatusKafkacluster struct {
+
+	// metadata
+	Metadata InstanceMetadataKafkaCluster `json:"metadata,omitempty"`
+
+	// status
+	Status InstanceStatusKafkaCluster `json:"status,omitempty"`
+}
+
+// Validate validates this instance status kafkacluster
+func (m *InstanceStatusKafkacluster) Validate(formats strfmt.Registry) error {
+	return nil
+}
+
+// MarshalBinary interface implementation
+func (m *InstanceStatusKafkacluster) MarshalBinary() ([]byte, error) {
+	if m == nil {
+		return nil, nil
+	}
+	return swag.WriteJSON(m)
+}
+
+// UnmarshalBinary interface implementation
+func (m *InstanceStatusKafkacluster) UnmarshalBinary(b []byte) error {
+	var res InstanceStatusKafkacluster
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}
