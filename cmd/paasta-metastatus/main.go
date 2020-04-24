@@ -26,7 +26,7 @@ type PaastaMetastatusOptions struct {
 	cli.PaastaOptions
 	cli.CSIOptions
 	AutoscalingInfo bool
-	Groupings       string
+	Groupings       []string
 }
 
 // Setup ...
@@ -34,7 +34,7 @@ func (o *PaastaMetastatusOptions) Setup() {
 	(&o.PaastaOptions).Setup()
 	(&o.CSIOptions).Setup()
 	flag.BoolVar(&o.AutoscalingInfo, "autoscaling-info", false, "")
-	flag.StringVarP(&o.Groupings, "groupings", "g", "", "")
+	flag.StringArrayVarP(&o.Groupings, "groupings", "g", []string{"region"}, "")
 }
 
 func parseFlags(opts *PaastaMetastatusOptions) error {
@@ -78,15 +78,49 @@ func printDashboards(
 	}
 }
 
-func printAPIStatus(cluster, endpoint string, sb *strings.Builder) error {
+func getMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Duration) {
+	cmdArgs := []string{}
+	verbosity := 0
+	timeout := time.Duration(20)
+
+	if opts.Verbosity > 0 {
+		verbosity = opts.Verbosity
+		timeout = 120
+	}
+	if opts.AutoscalingInfo {
+		cmdArgs = append(cmdArgs, "-a")
+		if verbosity < 2 {
+			verbosity = 2
+		}
+		timeout = 120
+	}
+	if len(opts.Groupings) > 0 {
+		cmdArgs = append(cmdArgs, "-g")
+		cmdArgs = append(cmdArgs, opts.Groupings...)
+	}
+	if opts.UseMesosCache {
+		cmdArgs = append(cmdArgs, "--use-mesos-cache")
+	}
+	if verbosity > 0 {
+		cmdArgs = append(cmdArgs, fmt.Sprintf("-%s", strings.Repeat("v", verbosity)))
+	}
+
+	return cmdArgs, timeout
+}
+
+func printAPIStatus(cluster, endpoint string, opts *PaastaMetastatusOptions, sb *strings.Builder) error {
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		return fmt.Errorf("Failed to parse API endpoint %v: %v", endpoint, err)
 	}
-	transport := httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
-	client := apiclient.New(transport, strfmt.Default)
-	cmdArgs := []string{""}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+
+	var (
+		transport        = httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
+		client           = apiclient.New(transport, strfmt.Default)
+		cmdArgs, timeout = getMetastatusCmdArgs(opts)
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
 	defer cancel()
 	mp := &operations.MetastatusParams{CmdArgs: cmdArgs, Context: ctx}
 	resp, err := client.Operations.Metastatus(mp)
@@ -100,12 +134,13 @@ func printAPIStatus(cluster, endpoint string, sb *strings.Builder) error {
 func printClusterStatus(
 	cluster, endpoint string,
 	dashboards map[string]interface{},
+	opts *PaastaMetastatusOptions,
 ) bool {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Cluster: %v\n", cluster))
 	printDashboards(cluster, dashboards, sb)
 	success := true
-	err := printAPIStatus(cluster, endpoint, sb)
+	err := printAPIStatus(cluster, endpoint, opts, sb)
 	if err != nil {
 		success = false
 		sb.WriteString(fmt.Sprintf("Failed to get status for cluster %v: %v\n", cluster, err))
@@ -156,7 +191,7 @@ func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 		wg.Add(1)
 		go func(cluster, endpoint string) {
 			defer wg.Done()
-			if !printClusterStatus(cluster, endpoint, dashboards) {
+			if !printClusterStatus(cluster, endpoint, dashboards, opts) {
 				success = false
 			}
 		}(cluster, endpoint)
