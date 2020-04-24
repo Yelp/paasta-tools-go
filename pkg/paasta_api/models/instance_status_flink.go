@@ -8,4 +8,4 @@ package models
 // InstanceStatusFlink Flink instance status
 //
 // swagger:model InstanceStatusFlink
-type InstanceStatusFlink interface{}
+type _InstanceStatusFlink interface{}
