@@ -1,7 +1,7 @@
 package volumes
 
 import (
-	"github.com/Yelp/paasta-tools-go/pkg/config_store"
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 type VolumeConfig struct {
@@ -15,7 +15,7 @@ type Volume struct {
 }
 
 func DefaultVolumesFromReader(
-	configStore *config_store.Store,
+	configStore *configstore.Store,
 ) (volumes []Volume, err error) {
 	volumeConfig := &VolumeConfig{Volumes: []Volume{}}
 	err = configStore.Load("volumes", &volumeConfig.Volumes)
