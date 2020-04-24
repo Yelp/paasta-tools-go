@@ -3,6 +3,7 @@ module github.com/Yelp/paasta-tools-go
 require (
 	cloud.google.com/go v0.38.0 // indirect
 	github.com/dlespiau/kube-test-harness v0.0.0-20190930170435-ec3f93e1a754
+	github.com/fatih/color v1.9.0
 	github.com/fatih/structs v1.1.0 // indirect
 	github.com/go-logfmt/logfmt v0.4.0 // indirect
 	github.com/go-openapi/errors v0.19.2
@@ -11,6 +12,7 @@ require (
 	github.com/go-openapi/swag v0.19.5
 	github.com/go-openapi/validate v0.19.5
 	github.com/go-swagger/go-swagger v0.21.0 // indirect
+	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/pmezard/go-difflib v1.0.0
