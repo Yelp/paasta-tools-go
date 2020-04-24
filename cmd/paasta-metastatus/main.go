@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	flag "github.com/spf13/pflag"
 
@@ -33,7 +34,16 @@ func parseFlags(opts *PaastaMetastatusOptions) error {
 	return nil
 }
 
-func metastatus(opts *PaastaMetastatusOptions) error {
+func printClusterStatus(
+	cluster, endpoint string,
+	opts *PaastaMetastatusOptions,
+	conf *configstore.Store,
+) error {
+	fmt.Printf("cluster %v endpoint %v\n", cluster, endpoint)
+	return nil
+}
+
+func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 	if opts.AutoscalingInfo {
 		if opts.Verbosity < 2 {
 			opts.Verbosity = 2
@@ -41,25 +51,45 @@ func metastatus(opts *PaastaMetastatusOptions) error {
 	}
 	sysStore := configstore.NewStore(opts.SysDir, nil)
 
-	var apiEndpoints map[string]interface{}
+	apiEndpoints := map[string]string{}
 	err := sysStore.Load("api_endpoints", &apiEndpoints)
 	if err != nil {
-		return err
+		return false, fmt.Errorf("Failed to load api_endpoints from configs: %v", err)
 	}
 
-	var clusters []interface{}
+	var clusters []string
 	if opts.Cluster != "" {
-		clusters = []interface{}{opts.Cluster}
+		clusters = []string{opts.Cluster}
 	} else {
 		err := sysStore.Load("clusters", &clusters)
 		if err != nil {
-			return err
+			return false, fmt.Errorf("Failed to load clusters from configs: %v", err)
 		}
 	}
 
-	fmt.Printf("api endpoints: %+v\nclusters: %+v\n", apiEndpoints, clusters)
+	var wg sync.WaitGroup
+	var success bool = true
+	for _, cluster := range clusters {
+		endpoint, ok := apiEndpoints[cluster]
+		if !ok {
+			fmt.Printf("WARN: api endpoint not found for %v\n", cluster)
+			continue
+		}
+		wg.Add(1)
+		go func(cluster, endpoint string) {
+			defer wg.Done()
+			err := printClusterStatus(cluster, endpoint, opts, sysStore)
+			if err != nil {
+				fmt.Printf(
+					"ERR: couldn't get status for cluster %v: %v", cluster, err,
+				)
+				success = false
+			}
+		}(cluster, endpoint)
+	}
+	wg.Wait()
 
-	return nil
+	return success, nil
 }
 
 func main() {
@@ -74,9 +104,12 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-	err = metastatus(options)
+	success, err := metastatus(options)
 	if err != nil {
 		fmt.Println(err)
+		os.Exit(1)
+	}
+	if !success {
 		os.Exit(1)
 	}
 }
