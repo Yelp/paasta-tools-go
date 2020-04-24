@@ -105,8 +105,8 @@ func NewStore(dir string, hints map[string]string) *Store {
 // Decode `path` contents using `json`, lock the store mutex, merge loaded data
 // into s.Data, unlock the mutex
 func (s *Store) loadPath(path string) error {
-	value := map[string]interface{}{}
-	err := s.ParseFile(path, value)
+	var value map[string]interface{}
+	err := s.ParseFile(path, &value)
 	if err != nil {
 		return fmt.Errorf("Failed to parse %s: %v", path, err)
 	}
@@ -177,7 +177,10 @@ func (s *Store) Get(key string) (interface{}, error) {
 	} else {
 		file = key
 	}
-	s.load(file)
+	err := s.load(file)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to load %v: %v", file, err)
+	}
 
 	val, ok := s.Data.Load(key)
 	if !ok {
