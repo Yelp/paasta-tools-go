@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config_store"
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 // V2DeploymentGroup ...
@@ -55,17 +55,17 @@ type ImageProvider interface {
 
 type DefaultImageProvider struct {
 	Service       string
-	ServiceConfig *config_store.Store
-	PaastaConfig  *config_store.Store
+	ServiceConfig *configstore.Store
+	PaastaConfig  *configstore.Store
 }
 
 // NewDefaultImageProviderForService ...
 func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
-	serviceConfig := config_store.NewStore(
+	serviceConfig := configstore.NewStore(
 		path.Join("/nail/etc/services", service),
 		map[string]string{"v2": "deployments"},
 	)
-	paastaConfig := config_store.NewStore(
+	paastaConfig := configstore.NewStore(
 		"/etc/paasta",
 		map[string]string{"registry": "docker_registry"},
 	)
@@ -96,7 +96,7 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
 	dockerRegistry := &DockerRegistry{Registry: ""}
-	err := provider.PaastaConfig.Load("registry", &dockerRegistry.Registry)
+	err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
 	return dockerRegistry.Registry, err
 }
 
@@ -122,7 +122,7 @@ func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup str
 func DeploymentAnnotations(
 	service, cluster, instance, deploymentGroup string,
 ) (map[string]string, error) {
-	configStore := config_store.NewStore(
+	configStore := configstore.NewStore(
 		fmt.Sprintf("/nail/etc/services/%s", service),
 		map[string]string{"v2": "deployments"},
 	)
@@ -136,7 +136,7 @@ func DeploymentAnnotations(
 	return deploymentAnnotationsForControlGroup(deployments, controlGroup)
 }
 
-func deploymentsFromConfig(cr *config_store.Store) (*Deployments, error) {
+func deploymentsFromConfig(cr *configstore.Store) (*Deployments, error) {
 	deployments := &Deployments{}
 	err := cr.Load("v2", deployments)
 	return deployments, err
