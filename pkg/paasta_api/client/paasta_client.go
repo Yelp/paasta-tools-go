@@ -12,6 +12,7 @@ import (
 
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/autoscaler"
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/marathon_dashboard"
+	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/operations"
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/resources"
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/service"
 )

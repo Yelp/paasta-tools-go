@@ -1,16 +1,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	flag "github.com/spf13/pflag"
 
 	"github.com/Yelp/paasta-tools-go/pkg/cli"
 	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 	"github.com/logrusorgru/aurora"
+
+	apiclient "github.com/Yelp/paasta-tools-go/pkg/paasta_api/client"
+	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/operations"
+	httptransport "github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
 )
 
 // PaastaMetastatusOptions ...
@@ -36,14 +44,9 @@ func parseFlags(opts *PaastaMetastatusOptions) error {
 	return nil
 }
 
-func printClusterStatus(
-	cluster, endpoint string,
-	dashboards map[string]interface{},
-	opts *PaastaMetastatusOptions,
-	conf *configstore.Store,
-) error {
-	sb := strings.Builder{}
-	sb.WriteString(fmt.Sprintf("Cluster: %v\n", cluster))
+func printDashboards(
+	cluster string, dashboards map[string]interface{}, sb *strings.Builder,
+) {
 	if dashboards == nil {
 		sb.WriteString(aurora.Red("No dashboards configured!\n").String())
 	} else {
@@ -73,8 +76,42 @@ func printClusterStatus(
 			sb.WriteString("\n")
 		}
 	}
-	fmt.Print(sb.String())
+}
+
+func printAPIStatus(cluster, endpoint string, sb *strings.Builder) error {
+	url, err := url.Parse(endpoint)
+	if err != nil {
+		return fmt.Errorf("Failed to parse API endpoint %v: %v", endpoint, err)
+	}
+	transport := httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
+	client := apiclient.New(transport, strfmt.Default)
+	cmdArgs := []string{""}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	mp := &operations.MetastatusParams{CmdArgs: cmdArgs, Context: ctx}
+	resp, err := client.Operations.Metastatus(mp)
+	if err != nil {
+		return fmt.Errorf("Failed to get metastatus: %s", aurora.Red(err))
+	}
+	sb.WriteString(fmt.Sprintf("%s\n", resp.Payload.Output))
 	return nil
+}
+
+func printClusterStatus(
+	cluster, endpoint string,
+	dashboards map[string]interface{},
+) bool {
+	sb := &strings.Builder{}
+	sb.WriteString(fmt.Sprintf("Cluster: %v\n", cluster))
+	printDashboards(cluster, dashboards, sb)
+	success := true
+	err := printAPIStatus(cluster, endpoint, sb)
+	if err != nil {
+		success = false
+		sb.WriteString(fmt.Sprintf("Failed to get status for cluster %v: %v\n", cluster, err))
+	}
+	fmt.Print(sb.String())
+	return success
 }
 
 func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
@@ -119,11 +156,7 @@ func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 		wg.Add(1)
 		go func(cluster, endpoint string) {
 			defer wg.Done()
-			err := printClusterStatus(cluster, endpoint, dashboards, opts, sysStore)
-			if err != nil {
-				fmt.Printf(
-					"ERR: couldn't get status for cluster %v: %v", cluster, err,
-				)
+			if !printClusterStatus(cluster, endpoint, dashboards) {
 				success = false
 			}
 		}(cluster, endpoint)
