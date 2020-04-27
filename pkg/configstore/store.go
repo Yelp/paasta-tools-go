@@ -105,8 +105,8 @@ func NewStore(dir string, hints map[string]string) *Store {
 // Decode `path` contents using `json`, lock the store mutex, merge loaded data
 // into s.Data, unlock the mutex
 func (s *Store) loadPath(path string) error {
-	value := map[string]interface{}{}
-	err := s.ParseFile(path, value)
+	var value map[string]interface{}
+	err := s.ParseFile(path, &value)
 	if err != nil {
 		return fmt.Errorf("Failed to parse %s: %v", path, err)
 	}
@@ -141,7 +141,7 @@ var extensions = []string{"json", "yaml"}
 
 // Look for `file`.json or `file`.yaml, if not found try loading all files and
 // print a warning about hints
-func (s *Store) load(file string) error {
+func (s *Store) load(file string, fromHint bool) error {
 	for _, ext := range extensions {
 		path := path.Join(s.Dir, fmt.Sprintf("%s.%s", file, ext))
 		exists, err := s.FileExists(path)
@@ -157,41 +157,50 @@ func (s *Store) load(file string) error {
 		}
 	}
 
-	log.Printf(
-		"WARN: loading all configs, consider adding some hints in %s",
-		path.Join(s.Dir, file),
-	)
-	return s.loadAll()
+	if !fromHint {
+		log.Printf(
+			"WARN: loading all configs, consider adding some hints in %s",
+			path.Join(s.Dir, file),
+		)
+		return s.loadAll()
+	}
+	return nil
 }
 
 // Get returns value for given `key`. If not found in `s.data`, call
 // `s.load` function with `file` from `s.hints` or `key` itself.
-func (s *Store) Get(key string) (interface{}, error) {
+func (s *Store) Get(key string) (interface{}, bool, error) {
 	if val, ok := s.Data.Load(key); ok {
-		return val, nil
+		return val, ok, nil
 	}
 
 	var file string
+	var fromHint bool
 	if val, ok := s.Hints[key]; ok {
 		file = val
+		fromHint = true
 	} else {
 		file = key
+		fromHint = false
 	}
-	s.load(file)
+	err := s.load(file, fromHint)
+	if err != nil {
+		return nil, false, fmt.Errorf("Failed to load %v: %v", file, err)
+	}
 
 	val, ok := s.Data.Load(key)
-	if !ok {
-		return nil, fmt.Errorf("key not found: %s", key)
-	}
-	return val, nil
+	return val, ok, nil
 }
 
 // Load uses mapstructure.Decode to parse result of a Get into provided
 // destination value
-func (s *Store) Load(key string, dst interface{}) error {
-	val, err := s.Get(key)
+func (s *Store) Load(key string, dst interface{}) (bool, error) {
+	val, ok, err := s.Get(key)
 	if err != nil {
-		return fmt.Errorf("Failed to get %s: %v", key, err)
+		return false, fmt.Errorf("Failed to get %s: %v", key, err)
 	}
-	return mapstructure.Decode(val, dst)
+	if !ok {
+		return false, nil
+	}
+	return true, mapstructure.Decode(val, dst)
 }
