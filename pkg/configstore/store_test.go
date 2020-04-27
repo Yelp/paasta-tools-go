@@ -107,12 +107,12 @@ func TestStore_load(test *testing.T) {
 			return true, nil
 		},
 	}
-	s.load("one")
+	s.load("one", false)
 
 	s.FileExists = func(path string) (bool, error) { return false, nil }
 	s.ParseFile = unexpectedParseFile(test)
 	s.ListFiles = func(dirname string) ([]string, error) { return []string{}, nil }
-	s.load("one")
+	s.load("one", false)
 }
 
 func TestStore_Get(test *testing.T) {
@@ -127,7 +127,7 @@ func TestStore_Get(test *testing.T) {
 		},
 	}
 	s.Data.Store("one", "two")
-	val, err := s.Get("one")
+	val, _, err := s.Get("one")
 	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "two", val)
 
@@ -138,7 +138,7 @@ func TestStore_Get(test *testing.T) {
 		v["two"] = "three"
 		return nil
 	}
-	val, err = s.Get("two")
+	val, _, err = s.Get("two")
 	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "three", val)
 
@@ -154,7 +154,7 @@ func TestStore_Get(test *testing.T) {
 		v["three"] = "four"
 		return nil
 	}
-	val, err = s.Get("three")
+	val, _, err = s.Get("three")
 	errorIf(test, err != nil, "key not found")
 	errorUnexpected(test, "four", val)
 
@@ -167,6 +167,6 @@ func TestStore_Get(test *testing.T) {
 	s.FileExists = func(string) (bool, error) {
 		return false, nil
 	}
-	val, _ = s.Get("four")
+	val, _, _ = s.Get("four")
 	errorIf(test, !listFilesCalled, "listFiles wasn't called")
 }
