@@ -105,7 +105,7 @@ func NewStore(dir string, hints map[string]string) *Store {
 // Decode `path` contents using `json`, lock the store mutex, merge loaded data
 // into s.Data, unlock the mutex
 func (s *Store) loadPath(path string) error {
-	var value map[string]interface{}
+	value := map[string]interface{}{}
 	err := s.ParseFile(path, &value)
 	if err != nil {
 		return fmt.Errorf("Failed to parse %s: %v", path, err)
@@ -141,7 +141,7 @@ var extensions = []string{"json", "yaml"}
 
 // Look for `file`.json or `file`.yaml, if not found try loading all files and
 // print a warning about hints
-func (s *Store) load(file string, fromHint bool) error {
+func (s *Store) load(file string) error {
 	for _, ext := range extensions {
 		path := path.Join(s.Dir, fmt.Sprintf("%s.%s", file, ext))
 		exists, err := s.FileExists(path)
@@ -157,13 +157,6 @@ func (s *Store) load(file string, fromHint bool) error {
 		}
 	}
 
-	if !fromHint {
-		log.Printf(
-			"WARN: loading all configs, consider adding some hints in %s",
-			path.Join(s.Dir, file),
-		)
-		return s.loadAll()
-	}
 	return nil
 }
 
@@ -183,12 +176,26 @@ func (s *Store) Get(key string) (interface{}, bool, error) {
 		file = key
 		fromHint = false
 	}
-	err := s.load(file, fromHint)
+	err := s.load(file)
 	if err != nil {
 		return nil, false, fmt.Errorf("Failed to load %v: %v", file, err)
 	}
 
 	val, ok := s.Data.Load(key)
+	if !ok {
+		if !fromHint {
+			log.Printf(
+				"WARN: loading all configs, consider adding some hints in %s",
+				path.Join(s.Dir, file),
+			)
+			err := s.loadAll()
+			if err != nil {
+				return nil, false, fmt.Errorf("failed to load all configs: %v", err)
+			}
+			val, ok = s.Data.Load(key)
+		}
+	}
+
 	return val, ok, nil
 }
 
