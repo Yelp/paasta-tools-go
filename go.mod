@@ -13,10 +13,13 @@ require (
 	github.com/go-openapi/validate v0.19.5
 	github.com/go-swagger/go-swagger v0.21.0 // indirect
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
+	github.com/mesos/mesos-go v0.0.10
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826 // indirect
 	github.com/pmezard/go-difflib v1.0.0
+	github.com/prometheus/common v0.4.1
 	github.com/prometheus/tsdb v0.7.1 // indirect
+	github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da // indirect
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.4.0
 	github.com/subosito/gotenv v1.2.0

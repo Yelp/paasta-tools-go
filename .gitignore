@@ -3,3 +3,4 @@ dist
 bin
 .idea/*
 /paasta-metastatus
+/tmp
