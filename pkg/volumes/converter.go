@@ -2,10 +2,11 @@ package volumes
 
 import (
 	"fmt"
-	paastaconfig "github.com/Yelp/paasta-tools-go/pkg/config"
-	corev1 "k8s.io/api/core/v1"
 	"log"
 	"strings"
+
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func paastaVolumesToKubernetesVolumes(
@@ -48,8 +49,9 @@ func formatMountName(hostPath string) string {
 	return formatted
 }
 
-func GetDefaultPaastaKubernetesVolumes(configReader paastaconfig.ConfigReader) ([]corev1.VolumeMount, []corev1.Volume, error) {
-	pvolumes, err := DefaultVolumesFromReader(configReader)
+// GetDefaultPaastaKubernetesVolumes ...
+func GetDefaultPaastaKubernetesVolumes(configStore *configstore.Store) ([]corev1.VolumeMount, []corev1.Volume, error) {
+	pvolumes, err := DefaultVolumesFromReader(configStore)
 	if err != nil {
 		err = fmt.Errorf("Error finding default volumes: %s", err)
 		log.Print(err)

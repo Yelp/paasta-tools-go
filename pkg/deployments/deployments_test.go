@@ -2,70 +2,39 @@ package deployments
 
 import (
 	"fmt"
+	"sync"
 	"testing"
+
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 const (
 	dockerRepo = "docker-paasta.yelpcorp.com:443"
 )
 
-type FakeDeploymentsReader struct {
-	data Deployments
-}
-
-func (fakereader FakeDeploymentsReader) Read(content interface{}) error {
-	*content.(*Deployments) = fakereader.data
-	return nil
-}
-
-type FakeRegistryReader struct {
-	registry DockerRegistry
-}
-
-func (fakereader FakeRegistryReader) Read(content interface{}) error {
-	*content.(*DockerRegistry) = fakereader.registry
-	return nil
-}
-
-type StaticImageProvider struct {
-	DockerRegistry string
-	Image          string
-}
-
-func NewStaticImageProvider(dockerRegistry, image string) *StaticImageProvider {
-	return &StaticImageProvider{
-		DockerRegistry: dockerRegistry,
-		Image:          image,
-	}
-}
-
-func (provider StaticImageProvider) DockerImageURLForService(serviceName, deploymentGroup string) (string, error) {
-	return fmt.Sprintf("%s/%s", provider.DockerRegistry, provider.Image), nil
-}
-
 func TestDefaultProviderGetDeployment(test *testing.T) {
-	fakeDeployments := Deployments{
-		V2: V2DeploymentsConfig{
-			Deployments: map[string]V2DeploymentGroup{
-				"dev.every": V2DeploymentGroup{
-					DockerImage: "busybox:latest",
-					GitSHA:      "03d6f783c99695af0e716588abb9ba83ac957be2",
-				},
-				"test.every": V2DeploymentGroup{
-					DockerImage: "ubuntu:latest",
-					GitSHA:      "f3d6f783c99695af0e716588abb9ba83ac957be3",
-				},
+	paastaConfigData := &sync.Map{}
+	paastaConfigData.Store("docker_registry", map[string]interface{}{
+		"docker_registry": "fakeregistry.yelp.com",
+	})
+
+	serviceConfigData := &sync.Map{}
+	serviceConfigData.Store("v2", map[string]interface{}{
+		"deployments": map[string]interface{}{
+			"dev.every": map[string]interface{}{
+				"docker_image": "busybox:latest",
+				"git_sha":      "03d6f783c99695af0e716588abb9ba83ac957be2",
+			},
+			"test.every": map[string]interface{}{
+				"docker_image": "ubuntu:latest",
+				"git_sha":      "f3d6f783c99695af0e716588abb9ba83ac957be3",
 			},
 		},
-	}
-	registry := DockerRegistry{
-		Registry: "fakeregistry.yelp.com",
-	}
-	imageReader := &FakeDeploymentsReader{data: fakeDeployments}
-	registryReader := &FakeRegistryReader{registry: registry}
+	})
+
 	imageProvider := DefaultImageProvider{
-		RegistryURLReader: registryReader,
-		ImageReader:       imageReader,
+		PaastaConfig:  &configstore.Store{Data: paastaConfigData},
+		ServiceConfig: &configstore.Store{Data: serviceConfigData},
 	}
 	testcases := map[string]string{
 		"dev.every":  "busybox:latest",
@@ -136,22 +105,24 @@ func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 }
 
 func TestDefaultGetRegistry(t *testing.T) {
-	fakeDeployments := Deployments{
-		V2: V2DeploymentsConfig{
-			Deployments: map[string]V2DeploymentGroup{},
-		},
-	}
-	registry := DockerRegistry{
-		Registry: "fakeregistry.yelp.com",
-	}
-	imageReader := &FakeDeploymentsReader{data: fakeDeployments}
-	registryReader := &FakeRegistryReader{registry: registry}
+	paastaConfigData := &sync.Map{}
+	paastaConfigData.Store("docker_registry", map[string]interface{}{
+		"docker_registry": "fakeregistry.yelp.com",
+	})
+
+	serviceConfigData := &sync.Map{}
+	serviceConfigData.Store("v2", map[string]interface{}{
+		"deployments": map[string]interface{}{},
+	})
+
 	imageProvider := DefaultImageProvider{
-		RegistryURLReader: registryReader,
-		ImageReader:       imageReader,
+		PaastaConfig:  &configstore.Store{Data: paastaConfigData},
+		ServiceConfig: &configstore.Store{Data: serviceConfigData},
 	}
-	url, _ := imageProvider.getDockerRegistry()
-	if url != registry.Registry {
-		t.Errorf("expected correct docker registry url")
+	url, err := imageProvider.getDockerRegistry()
+	if err != nil {
+		t.Errorf("expected %s actual: error %+v", "fakeregistry.yelp.com", err)
+	} else if url != "fakeregistry.yelp.com" {
+		t.Errorf("expected %s actual %+v", "fakeregistry.yelp.com", url)
 	}
 }

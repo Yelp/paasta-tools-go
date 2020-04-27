@@ -18,35 +18,35 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/Yelp/paasta-tools-go/pkg/config"
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 )
 
 // V2DeploymentGroup ...
 type V2DeploymentGroup struct {
-	DockerImage string `json:"docker_image"`
-	GitSHA      string `json:"git_sha"`
+	DockerImage string `json:"docker_image" mapstructure:"docker_image"`
+	GitSHA      string `json:"git_sha" mapstructure:"git_sha"`
 }
 
 // V2ControlGroup ...
 type V2ControlGroup struct {
-	DesiredState string `json:"desired_state"`
-	ForceBounce  string `json:"force_bounce"`
+	DesiredState string `json:"desired_state" mapstructure:"desired_state"`
+	ForceBounce  string `json:"force_bounce" mapstructure:"force_bounce"`
 }
 
 // V2DeploymentsConfig ...
 type V2DeploymentsConfig struct {
-	Deployments map[string]V2DeploymentGroup `json:"deployments"`
-	Controls    map[string]V2ControlGroup    `json:"controls"`
+	Deployments map[string]V2DeploymentGroup `json:"deployments" mapstructure:"deployments"`
+	Controls    map[string]V2ControlGroup    `json:"controls" mapstructure:"controls"`
 }
 
 // Deployments ...
 type Deployments struct {
-	V2 V2DeploymentsConfig `json:"v2"`
+	V2 V2DeploymentsConfig `json:"v2" mapstructure:"v2"`
 }
 
 // DockerRegistry ...
 type DockerRegistry struct {
-	Registry string `json:"docker_registry"`
+	Registry string `json:"docker_registry" mapstructure:"docker_registry"`
 }
 
 type ImageProvider interface {
@@ -54,28 +54,29 @@ type ImageProvider interface {
 }
 
 type DefaultImageProvider struct {
-	Service           string
-	RegistryURLReader config.ConfigReader
-	ImageReader       config.ConfigReader
+	Service       string
+	ServiceConfig *configstore.Store
+	PaastaConfig  *configstore.Store
 }
 
+// NewDefaultImageProviderForService ...
 func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
-	imageReader := config.ConfigFileReader{
-		Basedir:  path.Join("/nail/etc/services", service),
-		Filename: "deployments.json",
-	}
-	registryURLReader := config.ConfigFileReader{
-		Basedir:  "/etc/paasta",
-		Filename: "docker_registry.json",
-	}
+	serviceConfig := configstore.NewStore(
+		path.Join("/nail/etc/services", service),
+		map[string]string{"v2": "deployments"},
+	)
+	paastaConfig := configstore.NewStore(
+		"/etc/paasta",
+		map[string]string{"registry": "docker_registry"},
+	)
 	return &DefaultImageProvider{
-		Service:           service,
-		RegistryURLReader: registryURLReader,
-		ImageReader:       imageReader,
+		Service:       service,
+		ServiceConfig: serviceConfig,
+		PaastaConfig:  paastaConfig,
 	}
 }
 
-// DockerImageURLForService returns pullable docker image URL
+// DockerImageURLForDeployGroup returns pullable docker image URL
 func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGroup string) (string, error) {
 	var image string
 	registry, err := provider.getDockerRegistry()
@@ -94,17 +95,22 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 }
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
-	dockerRegistry := &DockerRegistry{}
-	err := provider.RegistryURLReader.Read(dockerRegistry)
+	dockerRegistry := &DockerRegistry{Registry: ""}
+	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
+	if !ok {
+		return "", fmt.Errorf("docker registry not found")
+	}
 	return dockerRegistry.Registry, err
-
 }
 
 func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup string) (string, error) {
-	deployments := &Deployments{}
-	err := provider.ImageReader.Read(deployments)
+	deployments := &Deployments{V2: V2DeploymentsConfig{}}
+	ok, err := provider.ServiceConfig.Load("v2", &deployments.V2)
 	if err != nil {
 		return "", err
+	}
+	if !ok {
+		return "", fmt.Errorf("image for deploymentGroup %v not found", deploymentGroup)
 	}
 	deployment, ok := deployments.V2.Deployments[deploymentGroup]
 
@@ -122,11 +128,11 @@ func (provider *DefaultImageProvider) getImageForDeployGroup(deploymentGroup str
 func DeploymentAnnotations(
 	service, cluster, instance, deploymentGroup string,
 ) (map[string]string, error) {
-	configReader := config.ConfigFileReader{
-		Basedir:  fmt.Sprintf("/nail/etc/services/%s", service),
-		Filename: "deployments.json",
-	}
-	deployments, err := deploymentsFromConfig(configReader)
+	configStore := configstore.NewStore(
+		fmt.Sprintf("/nail/etc/services/%s", service),
+		map[string]string{"v2": "deployments"},
+	)
+	deployments, err := deploymentsFromConfig(configStore)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"Error reading deployments for service %s: %s", service, err,
@@ -136,9 +142,12 @@ func DeploymentAnnotations(
 	return deploymentAnnotationsForControlGroup(deployments, controlGroup)
 }
 
-func deploymentsFromConfig(cr config.ConfigFileReader) (*Deployments, error) {
+func deploymentsFromConfig(cr *configstore.Store) (*Deployments, error) {
 	deployments := &Deployments{}
-	err := cr.Read(deployments)
+	ok, err := cr.Load("v2", deployments)
+	if !ok {
+		return nil, fmt.Errorf("deployments not found")
+	}
 	return deployments, err
 }
 
