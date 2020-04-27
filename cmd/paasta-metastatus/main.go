@@ -108,20 +108,22 @@ func getMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Duratio
 	return cmdArgs, timeout
 }
 
-func printAPIStatus(cluster, endpoint string, opts *PaastaMetastatusOptions, sb *strings.Builder) error {
+func printAPIStatus(
+	ctx context.Context,
+	cluster, endpoint string,
+	cmdArgs []string,
+	sb *strings.Builder,
+) error {
 	url, err := url.Parse(endpoint)
 	if err != nil {
 		return fmt.Errorf("Failed to parse API endpoint %v: %v", endpoint, err)
 	}
 
 	var (
-		transport        = httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
-		client           = apiclient.New(transport, strfmt.Default)
-		cmdArgs, timeout = getMetastatusCmdArgs(opts)
+		transport = httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
+		client    = apiclient.New(transport, strfmt.Default)
 	)
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
-	defer cancel()
 	mp := &operations.MetastatusParams{CmdArgs: cmdArgs, Context: ctx}
 	resp, err := client.Operations.Metastatus(mp)
 	if err != nil {
@@ -131,22 +133,20 @@ func printAPIStatus(cluster, endpoint string, opts *PaastaMetastatusOptions, sb 
 	return nil
 }
 
-func printClusterStatus(
+func getClusterStatus(
+	ctx context.Context,
 	cluster, endpoint string,
 	dashboards map[string]interface{},
-	opts *PaastaMetastatusOptions,
-) bool {
+	cmdArgs []string,
+) (*strings.Builder, error) {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Cluster: %v\n", cluster))
 	printDashboards(cluster, dashboards, sb)
-	success := true
-	err := printAPIStatus(cluster, endpoint, opts, sb)
+	err := printAPIStatus(ctx, cluster, endpoint, cmdArgs, sb)
 	if err != nil {
-		success = false
-		sb.WriteString(fmt.Sprintf("Failed to get status for cluster %v: %v\n", cluster, err))
+		return sb, fmt.Errorf("Failed to get status for cluster %v: %v", cluster, err)
 	}
-	fmt.Print(sb.String())
-	return success
+	return sb, nil
 }
 
 func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
@@ -158,26 +158,30 @@ func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 	sysStore := configstore.NewStore(opts.SysDir, nil)
 
 	apiEndpoints := map[string]string{}
-	err := sysStore.Load("api_endpoints", &apiEndpoints)
-	if err != nil {
-		return false, fmt.Errorf("Failed to load api_endpoints from configs: %v", err)
+	ok, err := sysStore.Load("api_endpoints", &apiEndpoints)
+	if !ok || err != nil {
+		return false, fmt.Errorf("Failed to load api_endpoints from configs: found=%v, error=%v", ok, err)
 	}
 
 	dashboardLinks := map[string]map[string]interface{}{}
-	err = sysStore.Load("dashboard_links", &dashboardLinks)
-	if err != nil {
-		return false, fmt.Errorf("Failed to load dashboard_links from configs: %v", err)
+	ok, err = sysStore.Load("dashboard_links", &dashboardLinks)
+	if !ok || err != nil {
+		return false, fmt.Errorf("Failed to load dashboard_links from configs: found=%v, error=%v", ok, err)
 	}
 
 	var clusters []string
 	if opts.Cluster != "" {
 		clusters = []string{opts.Cluster}
 	} else {
-		err := sysStore.Load("clusters", &clusters)
-		if err != nil {
-			return false, fmt.Errorf("Failed to load clusters from configs: %v", err)
+		ok, err := sysStore.Load("clusters", &clusters)
+		if !ok || err != nil {
+			return false, fmt.Errorf("Failed to load clusters from configs: found=%v, error=%v", ok, err)
 		}
 	}
+
+	cmdArgs, timeout := getMetastatusCmdArgs(opts)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
 
 	var wg sync.WaitGroup
 	var success bool = true
@@ -187,12 +191,14 @@ func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 			fmt.Printf("WARN: api endpoint not found for %v\n", cluster)
 			continue
 		}
-		dashboards, ok := dashboardLinks[cluster]
+		dashboards, _ := dashboardLinks[cluster]
 		wg.Add(1)
 		go func(cluster, endpoint string) {
 			defer wg.Done()
-			if !printClusterStatus(cluster, endpoint, dashboards, opts) {
-				success = false
+			sb, err := getClusterStatus(ctx, cluster, endpoint, dashboards, cmdArgs)
+			fmt.Print(sb)
+			if err != nil {
+				fmt.Fprint(os.Stderr, err.Error())
 			}
 		}(cluster, endpoint)
 	}
