@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
@@ -17,6 +18,7 @@ import (
 
 	apiclient "github.com/Yelp/paasta-tools-go/pkg/paasta_api/client"
 	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/operations"
+	"github.com/go-openapi/runtime"
 	httptransport "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
 )
@@ -44,7 +46,7 @@ func parseFlags(opts *PaastaMetastatusOptions) error {
 	return nil
 }
 
-func printDashboards(
+func writeDashboards(
 	cluster string, dashboards map[string]interface{}, sb *strings.Builder,
 ) {
 	if dashboards == nil {
@@ -64,13 +66,15 @@ func printDashboards(
 			switch d := dashboard.(type) {
 			case string:
 				sb.WriteString(aurora.Cyan(d).String())
-			case []interface{}:
+			case []string:
 				if len(d) > 1 {
 					for _, url := range d {
-						sb.WriteString(fmt.Sprintf("\n    %v", aurora.Cyan(url.(string))))
+						sb.WriteString(
+							fmt.Sprintf("\n    %v", aurora.Cyan(url)),
+						)
 					}
-				} else {
-					sb.WriteString(aurora.Cyan(d[0].(string)).String())
+				} else if len(d) == 1 {
+					sb.WriteString(aurora.Cyan(d[0]).String())
 				}
 			}
 			sb.WriteString("\n")
@@ -78,7 +82,7 @@ func printDashboards(
 	}
 }
 
-func getMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Duration) {
+func buildMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Duration) {
 	cmdArgs := []string{}
 	verbosity := 0
 	timeout := time.Duration(20)
@@ -108,7 +112,15 @@ func getMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Duratio
 	return cmdArgs, timeout
 }
 
-func printAPIStatus(
+type ctxKey int
+
+const (
+	ctxKeyTransport ctxKey = iota
+	ctxKeyOut
+	ctxKeyErr
+)
+
+func writeAPIStatus(
 	ctx context.Context,
 	cluster, endpoint string,
 	cmdArgs []string,
@@ -119,11 +131,15 @@ func printAPIStatus(
 		return fmt.Errorf("Failed to parse API endpoint %v: %v", endpoint, err)
 	}
 
-	var (
+	var transport runtime.ClientTransport
+	ctxTransport := ctx.Value(ctxKeyTransport)
+	if ctxTransport != nil {
+		transport = ctxTransport.(runtime.ClientTransport)
+	} else {
 		transport = httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
-		client    = apiclient.New(transport, strfmt.Default)
-	)
+	}
 
+	client := apiclient.New(transport, strfmt.Default)
 	mp := &operations.MetastatusParams{CmdArgs: cmdArgs, Context: ctx}
 	resp, err := client.Operations.Metastatus(mp)
 	if err != nil {
@@ -141,54 +157,30 @@ func getClusterStatus(
 ) (*strings.Builder, error) {
 	sb := &strings.Builder{}
 	sb.WriteString(fmt.Sprintf("Cluster: %v\n", cluster))
-	printDashboards(cluster, dashboards, sb)
-	err := printAPIStatus(ctx, cluster, endpoint, cmdArgs, sb)
+	writeDashboards(cluster, dashboards, sb)
+	err := writeAPIStatus(ctx, cluster, endpoint, cmdArgs, sb)
 	if err != nil {
 		return sb, fmt.Errorf("Failed to get status for cluster %v: %v", cluster, err)
 	}
 	return sb, nil
 }
 
-func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
-	if opts.AutoscalingInfo {
-		if opts.Verbosity < 2 {
-			opts.Verbosity = 2
-		}
-	}
-	sysStore := configstore.NewStore(opts.SysDir, nil)
-
-	apiEndpoints := map[string]string{}
-	ok, err := sysStore.Load("api_endpoints", &apiEndpoints)
-	if !ok || err != nil {
-		return false, fmt.Errorf("Failed to load api_endpoints from configs: found=%v, error=%v", ok, err)
-	}
-
-	dashboardLinks := map[string]map[string]interface{}{}
-	ok, err = sysStore.Load("dashboard_links", &dashboardLinks)
-	if !ok || err != nil {
-		return false, fmt.Errorf("Failed to load dashboard_links from configs: found=%v, error=%v", ok, err)
-	}
-
-	var clusters []string
-	if opts.Cluster != "" {
-		clusters = []string{opts.Cluster}
-	} else {
-		ok, err := sysStore.Load("clusters", &clusters)
-		if !ok || err != nil {
-			return false, fmt.Errorf("Failed to load clusters from configs: found=%v, error=%v", ok, err)
-		}
-	}
-
-	cmdArgs, timeout := getMetastatusCmdArgs(opts)
-	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
-	defer cancel()
+func metastatus(
+	ctx context.Context,
+	clusters []string,
+	apiEndpoints map[string]string,
+	dashboardLinks map[string]map[string]interface{},
+	cmdArgs []string,
+) (bool, error) {
+	outf := ctx.Value(ctxKeyOut).(io.Writer)
+	errf := ctx.Value(ctxKeyErr).(io.Writer)
 
 	var wg sync.WaitGroup
 	var success bool = true
 	for _, cluster := range clusters {
 		endpoint, ok := apiEndpoints[cluster]
 		if !ok {
-			fmt.Printf("WARN: api endpoint not found for %v\n", cluster)
+			fmt.Fprintf(errf, "WARN: api endpoint not found for %v\n", cluster)
 			continue
 		}
 		dashboards, _ := dashboardLinks[cluster]
@@ -196,9 +188,9 @@ func metastatus(opts *PaastaMetastatusOptions) (bool, error) {
 		go func(cluster, endpoint string) {
 			defer wg.Done()
 			sb, err := getClusterStatus(ctx, cluster, endpoint, dashboards, cmdArgs)
-			fmt.Print(sb)
+			fmt.Fprint(outf, sb)
 			if err != nil {
-				fmt.Fprint(os.Stderr, err.Error())
+				fmt.Fprint(errf, err.Error())
 			}
 		}(cluster, endpoint)
 	}
@@ -219,7 +211,47 @@ func main() {
 		flag.PrintDefaults()
 		os.Exit(0)
 	}
-	success, err := metastatus(options)
+
+	if options.AutoscalingInfo {
+		if options.Verbosity < 2 {
+			options.Verbosity = 2
+		}
+	}
+	sysStore := configstore.NewStore(options.SysDir, nil)
+
+	apiEndpoints := map[string]string{}
+	ok, err := sysStore.Load("api_endpoints", &apiEndpoints)
+	if !ok || err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load api_endpoints from configs: found=%v, error=%v", ok, err)
+		os.Exit(1)
+	}
+
+	dashboardLinks := map[string]map[string]interface{}{}
+	ok, err = sysStore.Load("dashboard_links", &dashboardLinks)
+	if !ok || err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load dashboard_links from configs: found=%v, error=%v", ok, err)
+		os.Exit(1)
+	}
+
+	var clusters []string
+	if options.Cluster != "" {
+		clusters = []string{options.Cluster}
+	} else {
+		ok, err := sysStore.Load("clusters", &clusters)
+		if !ok || err != nil {
+			fmt.Fprintf(os.Stderr, "Failed to load clusters from configs: found=%v, error=%v", ok, err)
+			os.Exit(1)
+		}
+	}
+
+	cmdArgs, timeout := buildMetastatusCmdArgs(options)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout*time.Second)
+	defer cancel()
+
+	ctx = context.WithValue(ctx, ctxKeyOut, os.Stdout)
+	ctx = context.WithValue(ctx, ctxKeyErr, os.Stderr)
+
+	success, err := metastatus(ctx, clusters, apiEndpoints, dashboardLinks, cmdArgs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
