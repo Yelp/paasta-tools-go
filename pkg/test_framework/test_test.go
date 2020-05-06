@@ -188,3 +188,60 @@ $`, rnd, ns, rnd, ns, rnd)
 	assert.NoError(t, err)
 	assert.Regexp(t, cmp, cout.String())
 }
+
+func TestRunArbitraryTargetWithEnv(t *testing.T) {
+	options := *newOptions(
+		DefaultEnvAlways(),
+		DefaultPrefix("test-sleep05"),
+		DefaultOperatorDelay(200 * time.Millisecond),
+	)
+	sinks, cout, _, _ := newSinks()
+	kube := startHarness(options, sinks, nil)
+	assert.NotNil(t, kube)
+
+	test := kube.NewTest(t).Setup()
+	assert.NotNil(t, test)
+
+	// RND is not a reserved env. variable (i.e. it's not set in test.Setup())
+	err := test.RunTarget("foo", map[string]string{
+		"RND": "123654",
+	})
+	assert.NoError(t, err)
+
+	// Both TEST_OPERATOR_NS and TEST_COUNT are reserved and will not be overwritten
+	// Also, RND=456321 will not be overwritten by RND=9 because ordering
+	err = test.RunTarget("foo", map[string]string{
+		"RND":              "456321",
+		"TEST_OPERATOR_NS": "foo",
+		"TEST_COUNT":       "8",
+	}, map[string]string{
+		"RND":        "9",
+		"TEST_COUNT": "9",
+		"FOO":        "-fighters",
+	})
+	assert.NoError(t, err)
+
+	rnd, ok := os.LookupEnv("RND")
+	assert.Equal(t, true, ok)
+	ns := test.Namespace
+	cmp := `^echo "export RND=.*
+echo "test-sleep05-cluster-start \$\{RND\}"
+echo "test-sleep05-cluster-stop \$\{RND\}"
+echo "test-sleep05-operator-start \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+sleep 0\.5s
+echo "test-sleep05-operator-stop \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+echo "test-sleep05-cleanup \$\{RND\} \$\{TEST_OPERATOR_NS\} \$\{TEST_COUNT\}"
+`
+	cmp += fmt.Sprintf(`export RND=%s
+test-sleep05-cluster-stop %s
+test-sleep05-cluster-start %s
+test-sleep05-foo 123654 %s 1
+test-sleep05-foo 456321 %s 1-fighters
+test-sleep05-cleanup %s %s 1
+test-sleep05-cluster-stop %s
+`, rnd, rnd, rnd, ns, ns, rnd, ns, rnd)
+	test.Close()
+	err = kube.Close()
+	assert.NoError(t, err)
+	assert.Regexp(t, cmp, cout.String())
+}

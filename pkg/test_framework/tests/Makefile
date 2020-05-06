@@ -24,7 +24,7 @@ itest-cluster-stop:
 	fi
 
 test-sleep05-foo:
-	@echo "test-sleep05-foo $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}"
+	@echo "test-sleep05-foo $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}$${FOO}"
 
 test-sleep05-bar:
 	@echo "test-sleep05-bar $${RND} $${TEST_OPERATOR_NS} $${TEST_COUNT}, expected to raise an error"
