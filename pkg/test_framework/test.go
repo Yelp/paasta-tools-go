@@ -49,8 +49,18 @@ func (t *Test) StopOperator() {
 	}
 }
 
-func (t *Test) RunTarget(name string) error {
-	return runTarget(t.harness.Options, t.harness.Sinks, name, t.envs)
+func (t *Test) RunTarget(name string, env ... map[string]string) error {
+	envs := t.envs
+	for _, envsInternal := range env {
+		for key, val := range envsInternal {
+			// Do not overwrite env. set previously, especially those in Setup() above
+			if _, ok := envs[key]; !ok {
+				envs[key] = val
+			}
+		}
+	}
+
+	return runTarget(t.harness.Options, t.harness.Sinks, name, envs)
 }
 
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
