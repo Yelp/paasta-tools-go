@@ -2,6 +2,8 @@ package deployments
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
 	"sync"
 	"testing"
 
@@ -14,9 +16,7 @@ const (
 
 func TestDefaultProviderGetDeployment(test *testing.T) {
 	paastaConfigData := &sync.Map{}
-	paastaConfigData.Store("docker_registry", map[string]interface{}{
-		"docker_registry": "fakeregistry.yelp.com",
-	})
+	paastaConfigData.Store("docker_registry", "fakeregistry.yelp.com")
 
 	serviceConfigData := &sync.Map{}
 	serviceConfigData.Store("v2", map[string]interface{}{
@@ -105,10 +105,19 @@ func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 }
 
 func TestDefaultGetRegistry(t *testing.T) {
-	paastaConfigData := &sync.Map{}
-	paastaConfigData.Store("docker_registry", map[string]interface{}{
-		"docker_registry": "fakeregistry.yelp.com",
-	})
+	dir, err := ioutil.TempDir("", "deployments-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	err = ioutil.WriteFile(
+		fmt.Sprintf("%v/docker_registry.json", dir),
+		[]byte(`{"docker_registry": "fakeregistry.yelp.com"}`),
+		0644,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	serviceConfigData := &sync.Map{}
 	serviceConfigData.Store("v2", map[string]interface{}{
@@ -116,7 +125,7 @@ func TestDefaultGetRegistry(t *testing.T) {
 	})
 
 	imageProvider := DefaultImageProvider{
-		PaastaConfig:  &configstore.Store{Data: paastaConfigData},
+		PaastaConfig:  configstore.NewStore(dir, nil),
 		ServiceConfig: &configstore.Store{Data: serviceConfigData},
 	}
 	url, err := imageProvider.getDockerRegistry()

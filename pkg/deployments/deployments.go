@@ -65,10 +65,7 @@ func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
 		path.Join("/nail/etc/services", service),
 		map[string]string{"v2": "deployments"},
 	)
-	paastaConfig := configstore.NewStore(
-		"/etc/paasta",
-		map[string]string{"registry": "docker_registry"},
-	)
+	paastaConfig := configstore.NewStore("/etc/paasta", nil)
 	return &DefaultImageProvider{
 		Service:       service,
 		ServiceConfig: serviceConfig,
@@ -96,7 +93,7 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
 	dockerRegistry := &DockerRegistry{Registry: ""}
-	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
+	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry.Registry)
 	if !ok {
 		return "", fmt.Errorf("docker registry not found")
 	}
