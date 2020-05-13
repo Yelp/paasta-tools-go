@@ -118,6 +118,7 @@ func TestParse(t *testing.T) {
 	// Test individual options (except verbose)
 	r1 := defs
 	r1.MakeDir = sanitizeMakeDir("foo")
+	r1.Makefile = "Bar"
 	r1.ManifestDirectory = "baz"
 	r1.Prefix = "fizz-"
 	r1.OperatorDelay = 5 * time.Second
@@ -127,6 +128,7 @@ func TestParse(t *testing.T) {
 	// Options can be set with Default... functions
 	o1 := *Parse(
 		DefaultMakeDir("foo"),
+		DefaultMakefile("Bar"),
 		DefaultManifests("baz"),
 		DefaultPrefix("fizz"),
 		DefaultOperatorDelay(5 * time.Second),
@@ -141,6 +143,7 @@ func TestParse(t *testing.T) {
 	o2 := *Parse(
 		OverrideOsArgs([]string{
 			"-k8s.makedir=foo",
+			"-k8s.makefile=Bar",
 			"-k8s.manifests=baz",
 			"-k8s.prefix=fizz",
 			"-k8s.op-delay=5s",
@@ -152,10 +155,11 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, r1, o2)
 
 	// Options can be set with Default... functions and overridden from command line
+	// Default "Makefile" is set for Makefile when no explicitly set
 	o3 := *Parse(
-		DefaultMakeDir("foo"),
-		DefaultManifests("baz"),
-		DefaultPrefix("fizz"),
+		DefaultMakeDir("bad"),
+		DefaultManifests("bad"),
+		DefaultPrefix("bad"),
 		DefaultOperatorDelay(5 * time.Second),
 		DefaultNoCleanup(),
 		DefaultEnvAlways(),
