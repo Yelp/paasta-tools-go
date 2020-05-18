@@ -9,10 +9,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 )
 
-// Read an element (value or section) from the unstructured object, given a path
-// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
-// an error if element is not found or if a nesting element is not a section
-// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
+// ReadValue (element, array or section) from an unstructured object
+//
+// Requires a path consisting of nested element names e.g. "metadata", "labels", "some_label". Returns an error if
+// element is not found or if a nesting element is not a section. By "section" I mean map[string]interface{} i.e. map
+// capable of nesting elements. No support for addressing individual elements in an array (slice).
 func ReadValue(obj *unstructured.Unstructured, path ...string) (interface{}, error) {
 	if len(path) == 0 {
 		return nil, fmt.Errorf("empty path")
@@ -44,10 +45,11 @@ func ReadValue(obj *unstructured.Unstructured, path ...string) (interface{}, err
 	panic("Unreachable code in ReadValue")
 }
 
-// Write an element (value or section) from the unstructured object, given a path
-// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
-// an error if nesting element is not found or is not a section
-// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
+// WriteValue (element, array or section) from an unstructured object
+//
+// Requires a path consisting of nested element names e.g. "metadata", "labels", "some_label". Returns an error if
+// nesting element is not found or is not a section. By "section" I mean map[string]interface{} i.e. map
+// capable of nesting elements. No support for addressing individual elements in an array (slice).
 func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
@@ -75,11 +77,12 @@ func WriteValue(obj *unstructured.Unstructured, value interface{}, path ...strin
 	panic("Unreachable code in WriteValue")
 }
 
-// Delete an element (value or section) from the unstructured object, given a path
-// consisting of nested element names e.g. "metadata", "labels", "some_label". Returns
-// an error if nesting element is not a section. There is no error if the element
-// being deleted does not exist, because that would be a no-op anyway.
-// By "section" I mean map[string]interface{} i.e. map capable of nesting elements
+// DeleteValue (element, array or section) from the unstructured object
+//
+// Requires a path consisting of nested element names e.g. "metadata", "labels", "some_label". Returns an error if
+// nesting element is not a section. There is no error if the element being deleted does not exist, because that would
+// be a no-op anyway. By "section" I mean map[string]interface{} i.e. map capable of nesting elements. No support for
+// addressing individual elements in an array (slice).
 func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 	if len(path) == 0 {
 		return fmt.Errorf("empty path")
@@ -109,10 +112,11 @@ func DeleteValue(obj *unstructured.Unstructured, path ...string) error {
 	panic("Unreachable code in DeleteValue")
 }
 
-// Load an Unstructured object from the textual data, either in JSON or YAML format
-// using standard Reader interface (i.e. could be a file, hardcoded text, something else).
-// Note: Unstructured object supports conversion to UnstructuredList for any object
-// which contains "items" directly under the root
+// LoadUnstructured load an object from the textual data
+//
+// Using standard Reader interface (i.e. could be a file, hardcoded text, something else). Note: Unstructured object
+// supports conversion to UnstructuredList for any object which contains "items" map directly under the object root.
+// Both JSON and YAML formats are supported.
 func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 	reader, _, isJson := yaml.GuessJSONStream(r, bytes.MinRead)
 	data, err := ioutil.ReadAll(reader)
@@ -132,8 +136,20 @@ func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 	return &result, err
 }
 
-// Load either strongly typed k8s object, or Unstructured object, from textual data
-// either in JSON or YAML format.
+// LoadInto load an object from the textual data into an existing K8s object
+//
+// This function supports both strong-typed object and Unstructured object. For example to load a deployment file
+// the following can be used:
+//
+//    dep := appsv1.Deployment{}
+//    if err := framework.LoadInto(bufio.NewReader(file), &dep); err != nil { . . .
+//
+// The benefits of using strong-typed objects (rather than unstructured.Unstructured) are:
+//   * K8s will validate the input file while loading it
+//   * Individual elements of the service definition will be easier to work with
+//   * Function framework.WaitFor() provides special handling waiting on pods for types which can own them
+//
+// Both JSON and YAML formats are supported.
 func LoadInto(r io.Reader, into interface{}) error {
 	if err := yaml.NewYAMLOrJSONDecoder(r, bytes.MinRead).Decode(into); err != nil {
 		return err
