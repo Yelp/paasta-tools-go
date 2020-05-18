@@ -15,10 +15,17 @@ import (
 
 type WaitForFn func()(interface{}, error)
 
-// Wait until from returns a given number of instances. In the context of strongly
-// typed non-List k8s objects this typically means number of ready pods; for List objects
-// (including UnstructuredList) this means number of items; for Unstructured object
-// this means hardcoded 1. For details, refer to getReady function.
+// WaitFor waits until "from" function returns a given number of instances
+//
+// If the "from" function returns a strongly-typed K8s object of a type which can own pods, this number of instances
+// refers to the number of ready pods. If the "from" function returns any of K8s List objects (including
+// unstructured.UnstructuredList) this number refers to the number of items in the list. For Unstructured object, the
+// returned number is a hardcoded 1. Function "from" can also return an integer number, which is useful if it needs
+// to perform some specific check e.g. on data inside an object read from the test cluster. Specifics for individual
+// K8s types are inside getReady function below.
+//
+// If the "from" function does not return an expected number of instances within "timeout", this function will
+// panic, hence failing test.
 func WaitFor(wanted int, timeout time.Duration, from WaitForFn) error {
 	return wait.Poll(time.Second, timeout, func() (bool, error) {
 		current, err := from()
