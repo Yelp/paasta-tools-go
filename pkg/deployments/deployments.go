@@ -140,12 +140,12 @@ func DeploymentAnnotations(
 }
 
 func deploymentsFromConfig(cr *configstore.Store) (*Deployments, error) {
-	deployments := &Deployments{}
-	ok, err := cr.Load("v2", deployments)
+	conf := &V2DeploymentsConfig{}
+	ok, err := cr.Load("v2", conf)
 	if !ok {
 		return nil, fmt.Errorf("deployments not found")
 	}
-	return deployments, err
+	return &Deployments{V2: *conf}, err
 }
 
 func makeControlGroup(service, instance, cluster string) string {
