@@ -77,11 +77,11 @@ func main() {
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
-	defer resp.Body.Close()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	} else {
 		fmt.Printf("Marked %s on %s:%d as DOWN for reason \"%s\"\n", options.ServiceName, options.ServiceIP, options.ServicePort, options.Reason)
 	}
+	defer resp.Body.Close()
 }

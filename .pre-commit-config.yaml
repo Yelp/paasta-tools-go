@@ -4,7 +4,13 @@ repos:
     sha: HEAD
     hooks:
       - id: go-fmt
+  - repo: local
+    hooks:
       - id: go-vet
+        name: go vet
+        entry: .hooks/run-go-vet.sh
+        language: script
+        files: \.go$
   - repo: https://github.com/Yelp/detect-secrets
     sha: 0.9.1
     hooks:
