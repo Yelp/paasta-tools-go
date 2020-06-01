@@ -4,7 +4,7 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
-VERSION=0.0.2
+VERSION=0.0.3
 
 .PHONY: cmd $(CMDS)
 
@@ -21,7 +21,7 @@ clean:
 
 cmd: cmd/*
 
-$(CMDS): 
+$(CMDS):
 	[ -d bin ] || mkdir -p bin
 	GO111MODULE=on go build -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
 
