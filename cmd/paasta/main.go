@@ -63,6 +63,11 @@ func paasta() (int, error) {
 	}
 	defer zr.Close()
 
+	spanEntry := zt.StartSpan("entrypoint")
+	defer spanEntry.Finish()
+
+	spanEntryParent := zipkin.Parent(spanEntry.Context())
+
 	if err != nil {
 		fmt.Fprintf(
 			os.Stderr,
@@ -77,32 +82,30 @@ func paasta() (int, error) {
 
 	if len(os.Args) > 1 {
 		subcommand = os.Args[1]
-		spanListCommands := zt.StartSpan("list-subcommands")
+		spanListCommands := zt.StartSpan("list-subcommands", spanEntryParent)
+		defer spanListCommands.Finish()
+
 		var err error
 		cmds, err := listPaastaCommands()
 		if err != nil {
 			spanListCommands.Tag("error", err.Error())
-			spanListCommands.Finish()
 			return 1, fmt.Errorf(
 				"generating list of sub-commands: %s", err,
 			)
 		}
-		spanListCommands.Finish()
 
-		spanLookupPath := zt.StartSpan("lookup-subcommand")
 		fullCmdName := fmt.Sprintf("paasta-%s", subcommand)
 		if _, ok := cmds[fullCmdName]; ok {
 			var err error
 			subcommandPath, err = exec.LookPath(fullCmdName)
 			if err != nil {
 				spanListCommands.Tag("error", err.Error())
-				spanLookupPath.Finish()
 				return 1, fmt.Errorf(
 					"looking up %s in PATH: %s", fullCmdName, err,
 				)
 			}
 		}
-		spanLookupPath.Finish()
+		spanListCommands.Finish()
 	}
 
 	if subcommandPath != "" {
@@ -116,7 +119,7 @@ func paasta() (int, error) {
 		args = append(args, os.Args[1:]...)
 	}
 
-	spanExec := zt.StartSpan("exec-subcommand")
+	spanExec := zt.StartSpan("exec-subcommand", spanEntryParent)
 	spanExec.Tag("args", strings.Join(args, " "))
 	spanExec.Tag("subcommandPath", subcommandPath)
 	spanExec.Tag("subcommand", subcommand)
