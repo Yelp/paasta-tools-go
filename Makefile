@@ -62,3 +62,20 @@ gen-paasta-api:
 	@echo "in pkg/paastaapi/client/paasta_client.go, run 'go build ./...' to check."
 	@echo
 	@echo "Do not forget to 'git add' and 'git commit' updated swagger.json and paasta-api"
+
+# Steps to release
+# 1. Bump version in Makefile
+# 2. `make release`
+release:
+	# docker run -it --rm -v "$(pwd)":/usr/local/src/paasta-tools-go \
+	# 	ferrarimarco/github-changelog-generator \
+	# 	-u Yelp \
+	# 	-p paasta-tools-go \
+	# 	--max-issues=100 \
+	# 	--future-release $(VERSION) \
+	# 	--output ../CHANGELOG.md
+	@git diff
+	@echo "Now Run:"
+	@echo 'git commit -a -m "Released $(VERSION) via make release"'
+	@echo 'git tag -a -m "Released $(VERSION) via make release" v$(VERSION)'
+	@echo 'git push --tags origin master'
