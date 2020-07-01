@@ -10,9 +10,9 @@ import (
 	reporterhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
-const zipkinReporter_ = "http"
+const zipkinReporter = "http"
 
-func initZipkin_(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
+func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	reporter := reporterhttp.NewReporter(zipkinURL)
 
 	localEndpoint, err := zipkin.NewEndpoint("paasta-cli", "localhost:0")

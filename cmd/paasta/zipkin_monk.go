@@ -1,4 +1,4 @@
-// build yelp
+// +build yelp
 
 package main
 
