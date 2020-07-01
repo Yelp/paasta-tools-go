@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/openzipkin/zipkin-go"
-	"github.com/openzipkin/zipkin-go/reporter"
-	reporterhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
-const endpointURL = "http://zipkin.paasta-pnw-devc.yelp/api/v2/spans"
+var version = "0.0.1"
 
 // map[string]bool is emulating a set
 func listPaastaCommands() (map[string]bool, error) {
@@ -31,33 +30,9 @@ func listPaastaCommands() (map[string]bool, error) {
 	return cmds, nil
 }
 
-func initZipkin(endpointURL string) (reporter.Reporter, *zipkin.Tracer, error) {
-	reporter := reporterhttp.NewReporter(endpointURL)
-
-	localEndpoint, err := zipkin.NewEndpoint("paasta-cli", "localhost:0")
-	if err != nil {
-		return nil, nil, fmt.Errorf("initializing endpoint: %v", err)
-	}
-
-	sampler, err := zipkin.NewCountingSampler(1)
-	if err != nil {
-		return nil, nil, fmt.Errorf("initializing sampler: %v", err)
-	}
-
-	tracer, err := zipkin.NewTracer(
-		reporter,
-		zipkin.WithSampler(sampler),
-		zipkin.WithLocalEndpoint(localEndpoint),
-	)
-	if err != nil {
-		return nil, nil, fmt.Errorf("initializing tracer: %v", err)
-	}
-
-	return reporter, tracer, err
-}
-
 func paasta() (int, error) {
-	zr, zt, err := initZipkin(endpointURL)
+	zipkinURL, _ := os.LookupEnv("PAASTA_ZIPKIN_URL")
+	zr, zt, err := initZipkin(zipkinURL)
 	if err != nil {
 		return 1, err
 	}
@@ -156,6 +131,13 @@ func paasta() (int, error) {
 
 // os.Exit doesn't work well with defered calls
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "-version" {
+		fmt.Printf("go-paasta: %v\n", version)
+		fmt.Printf("zipkin: %v\n", zipkinReporter)
+		fmt.Printf("runtime: %v\n", runtime.Version())
+		os.Exit(0)
+	}
+
 	exit, err := paasta()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err.Error())
