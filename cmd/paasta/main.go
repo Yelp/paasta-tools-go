@@ -101,14 +101,14 @@ func paasta() (int, error) {
 
 	sc := spanExec.Context()
 	env := os.Environ()
-	env = append(env, fmt.Sprintf("ZIPKIN_TRACE_ID=%v", sc.TraceID))
-	env = append(env, fmt.Sprintf("ZIPKIN_SPAN_ID=%v", sc.ID))
-	env = append(env, fmt.Sprintf("ZIPKIN_PARENT_ID=%v", sc.ParentID))
+	env = append(env, fmt.Sprintf("X_B3_TRACE_ID=%v", sc.TraceID))
+	env = append(env, fmt.Sprintf("X_B3_SPAN_ID=%v", sc.ID))
+	env = append(env, fmt.Sprintf("X_B3_PARENT_ID=%v", sc.ParentID))
 	if sc.Sampled != nil && *sc.Sampled {
-		env = append(env, "ZIPKIN_SAMPLED=1")
+		env = append(env, "X_B3_SAMPLED=1")
 	}
 	if sc.Debug {
-		env = append(env, "ZIPKIN_DEBUG=1")
+		env = append(env, "X_B3_FLAGS=1")
 	}
 
 	cmd := &exec.Cmd{
