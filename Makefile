@@ -4,7 +4,7 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
-VERSION=0.0.4
+VERSION=0.0.5
 
 .PHONY: cmd $(CMDS)
 

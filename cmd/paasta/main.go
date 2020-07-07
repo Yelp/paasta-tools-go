@@ -12,7 +12,7 @@ import (
 	"github.com/openzipkin/zipkin-go"
 )
 
-var version = "0.0.1"
+var version = "0.0.5"
 
 // map[string]bool is emulating a set
 func listPaastaCommands() (map[string]bool, error) {
@@ -122,6 +122,9 @@ func paasta() (int, error) {
 	if err := cmd.Run(); err != nil {
 		spanExec.Tag("error", err.Error())
 		spanExec.Finish()
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return exitError.ExitCode(), nil
+		}
 		return 1, fmt.Errorf("error running %s: %s", subcommandPath, err)
 	}
 	spanExec.Finish()
