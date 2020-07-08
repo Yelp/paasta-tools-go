@@ -18,10 +18,10 @@ const zipkinReporter = "monk"
 func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	if zipkinURL == "" {
 		runtimeenv, err := ioutil.ReadFile("/nail/etc/runtimeenv")
-		if strings.TrimSpace(string(runtimeenv)) != "prod" || err != nil {
-			zipkinURL = "monk://169.254.255.254:1473/tmp_paasta_zipkin"
-		} else {
+		if err == nil && strings.TrimSpace(string(runtimeenv)) == "prod" {
 			zipkinURL = "monk://169.254.255.254:1473/zipkin"
+		} else {
+			zipkinURL = "monk://169.254.255.254:1473/tmp_paasta_zipkin"
 		}
 	}
 
