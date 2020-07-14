@@ -11,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	paastaversion "github.com/Yelp/paasta-tools-go/pkg/version"
+	paastazipkin "github.com/Yelp/paasta-tools-go/pkg/zipkin"
 	"github.com/openzipkin/zipkin-go"
 	"k8s.io/klog"
 )
-
-var version = "0.0.5"
 
 // map[string]bool is emulating a set
 func listPaastaCommands() (map[string]bool, error) {
@@ -43,7 +43,7 @@ func paasta() (int, error) {
 		store.Load("paasta_zipkin_url", &zipkinURL)
 	}
 
-	zr, zt, err := initZipkin(zipkinURL)
+	zr, zt, err := paastazipkin.InitZipkin(zipkinURL)
 	if err != nil {
 		klog.V(10).Infof("Error initializing zipkin: %s\n", err)
 		err = nil
@@ -143,9 +143,9 @@ func paasta() (int, error) {
 // os.Exit doesn't work well with defered calls
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "-version" {
-		fmt.Printf("go-paasta: %v\n", version)
-		fmt.Printf("zipkin: %v\n", zipkinReporter)
-		fmt.Printf("runtime: %v\n", runtime.Version())
+		fmt.Printf("paasta-tools-go version: %v\n", paastaversion.Version)
+		fmt.Printf("zipkin initializers: %v\n", strings.Join(paastazipkin.Initializers(), ", "))
+		fmt.Printf("go runtime: %v\n", runtime.Version())
 		os.Exit(0)
 	}
 

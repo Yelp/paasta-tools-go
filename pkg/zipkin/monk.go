@@ -1,6 +1,6 @@
 // +build yelp
 
-package main
+package zipkin
 
 import (
 	"fmt"
@@ -11,32 +11,26 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
-const zipkinReporter = "monk"
+type monkInitializer struct{}
 
-func noopZipkin(err error) (reporter.Reporter, *zipkin.Tracer, error) {
-	rep := reporter.NewNoopReporter()
-	tr, _ := zipkin.NewTracer(rep)
-	return rep, tr, err
-}
-
-func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
+func (*monkInitializer) zipkinInitialize(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	if zipkinURL == "" {
-		return noopZipkin(fmt.Errorf("zipkin url missing"))
+		return nil, nil, fmt.Errorf("zipkin url missing")
 	}
 
 	reporter, err := reportermonk.NewReporter(zipkinURL)
 	if err != nil {
-		return noopZipkin(fmt.Errorf("initializing reporter: %v", err))
+		return nil, nil, fmt.Errorf("initializing reporter: %v", err)
 	}
 
 	localEndpoint, err := zipkin.NewEndpoint("paasta-cli", "localhost:0")
 	if err != nil {
-		return noopZipkin(fmt.Errorf("initializing endpoint: %v", err))
+		return nil, nil, fmt.Errorf("initializing endpoint: %v", err)
 	}
 
 	sampler, err := zipkin.NewCountingSampler(1)
 	if err != nil {
-		return noopZipkin(fmt.Errorf("initializing sampler: %v", err))
+		return nil, nil, fmt.Errorf("initializing sampler: %v", err)
 	}
 
 	tracer, err := zipkin.NewTracer(
@@ -45,8 +39,15 @@ func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 		zipkin.WithLocalEndpoint(localEndpoint),
 	)
 	if err != nil {
-		return noopZipkin(fmt.Errorf("initializing tracer: %v", err))
+		return nil, nil, fmt.Errorf("initializing tracer: %v", err)
 	}
 
 	return reporter, tracer, nil
+}
+
+func init() {
+	if zipkinInitializers == nil {
+		zipkinInitializers = map[string]zipkinInitializer{}
+	}
+	zipkinInitializers["monk"] = &monkInitializer{}
 }

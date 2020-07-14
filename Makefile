@@ -4,7 +4,7 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
-VERSION=0.0.5
+VERSION=0.0.6
 
 .PHONY: cmd $(CMDS)
 
@@ -65,8 +65,12 @@ gen-paasta-api:
 
 paasta_go:
 ifeq ($(PAASTA_ENV),YELP)
+	GOPRIVATE=*.yelpcorp.com \
 	GOPROXY=http://athens.paasta-norcal-devc.yelp \
-	GO111MODULE=on go build -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
+	GO111MODULE=on go build \
+		-ldflags="-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION)" \
+		-tags yelp -modfile int.mod -v -o paasta_go \
+		./cmd/paasta
 else
 	GO111MODULE=on go build -v -o paasta_go ./cmd/paasta
 endif
