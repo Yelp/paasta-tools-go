@@ -6,6 +6,8 @@ GID:=$(shell id -g)
 GO_VERSION=1.12.7
 VERSION=0.0.6
 
+GOBUILD=GO111MODULE=on go build -ldflags="-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION)"
+
 .PHONY: cmd $(CMDS)
 
 all: build test
@@ -13,7 +15,7 @@ test:
 	GO111MODULE=on go test -failfast -v ./...
 
 build:
-	GO111MODULE=on go build -v ./...
+	$(GOBUILD) -v ./...
 
 clean:
 	rm -rf bin
@@ -23,7 +25,7 @@ cmd: cmd/*
 
 $(CMDS):
 	[ -d bin ] || mkdir -p bin
-	GO111MODULE=on go build -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
+	$(GOBUILD) -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
 
 docker_build_%:
 	@echo "Building build docker image for $*"
@@ -67,12 +69,9 @@ paasta_go:
 ifeq ($(PAASTA_ENV),YELP)
 	GOPRIVATE=*.yelpcorp.com \
 	GOPROXY=http://athens.paasta-norcal-devc.yelp \
-	GO111MODULE=on go build \
-		-ldflags="-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION)" \
-		-tags yelp -modfile int.mod -v -o paasta_go \
-		./cmd/paasta
+	$(GOBUILD) -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
 else
-	GO111MODULE=on go build -v -o paasta_go ./cmd/paasta
+	$(GOBUILD) -v -o paasta_go ./cmd/paasta
 endif
 
 # Steps to release
