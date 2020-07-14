@@ -67,7 +67,7 @@ gen-paasta-api:
 
 paasta_go:
 ifeq ($(PAASTA_ENV),YELP)
-	GOPRIVATE=*.yelpcorp.com \
+	GONOSUMDB=*.yelpcorp.com \
 	GOPROXY=http://athens.paasta-norcal-devc.yelp \
 	$(GOBUILD) -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
 else
