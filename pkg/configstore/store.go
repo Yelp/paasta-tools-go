@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v2"
 )
 
 // Store is a container that fetches and caches config values from disk and
@@ -63,14 +64,22 @@ func listFiles(dirname string) ([]string, error) {
 	return ret, nil
 }
 
-func parseFile(path string, value interface{}) error {
-	reader, err := os.Open(path)
+func parseFile(filepath string, value interface{}) error {
+	reader, err := os.Open(filepath)
 	defer reader.Close()
 	if err != nil {
-		return fmt.Errorf("Failed to open %s: %v", path, err)
+		return fmt.Errorf("Failed to open %s: %v", filepath, err)
 	}
 
-	return json.NewDecoder(reader).Decode(value)
+	ext := path.Ext(filepath)
+	switch ext {
+	case ".json":
+		return json.NewDecoder(reader).Decode(value)
+	case ".yaml":
+		return yaml.NewDecoder(reader).Decode(value)
+	default:
+		return fmt.Errorf("unknown extension: %v", ext)
+	}
 }
 
 func fileExists(path string) (bool, error) {

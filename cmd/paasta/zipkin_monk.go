@@ -4,8 +4,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
-	"strings"
 
 	reportermonk "github.com/Yelp/paasta-tools-go/pkg/zipkin/reporter/monk"
 
@@ -15,29 +13,30 @@ import (
 
 const zipkinReporter = "monk"
 
+func noopZipkin(err error) (reporter.Reporter, *zipkin.Tracer, error) {
+	rep := reporter.NewNoopReporter()
+	tr, _ := zipkin.NewTracer(rep)
+	return rep, tr, err
+}
+
 func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	if zipkinURL == "" {
-		runtimeenv, err := ioutil.ReadFile("/nail/etc/runtimeenv")
-		if err == nil && strings.TrimSpace(string(runtimeenv)) == "prod" {
-			zipkinURL = "monk://169.254.255.254:1473/zipkin"
-		} else {
-			zipkinURL = "monk://169.254.255.254:1473/tmp_paasta_zipkin"
-		}
+		return noopZipkin(fmt.Errorf("zipkin url missing"))
 	}
 
 	reporter, err := reportermonk.NewReporter(zipkinURL)
 	if err != nil {
-		return nil, nil, fmt.Errorf("initializing reporter: %v", err)
+		return noopZipkin(fmt.Errorf("initializing reporter: %v", err))
 	}
 
 	localEndpoint, err := zipkin.NewEndpoint("paasta-cli", "localhost:0")
 	if err != nil {
-		return nil, nil, fmt.Errorf("initializing endpoint: %v", err)
+		return noopZipkin(fmt.Errorf("initializing endpoint: %v", err))
 	}
 
 	sampler, err := zipkin.NewCountingSampler(1)
 	if err != nil {
-		return nil, nil, fmt.Errorf("initializing sampler: %v", err)
+		return noopZipkin(fmt.Errorf("initializing sampler: %v", err))
 	}
 
 	tracer, err := zipkin.NewTracer(
@@ -46,8 +45,8 @@ func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 		zipkin.WithLocalEndpoint(localEndpoint),
 	)
 	if err != nil {
-		return nil, nil, fmt.Errorf("initializing tracer: %v", err)
+		return noopZipkin(fmt.Errorf("initializing tracer: %v", err))
 	}
 
-	return reporter, tracer, err
+	return reporter, tracer, nil
 }

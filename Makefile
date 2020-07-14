@@ -63,6 +63,14 @@ gen-paasta-api:
 	@echo
 	@echo "Do not forget to 'git add' and 'git commit' updated swagger.json and paasta-api"
 
+paasta_go:
+ifeq ($(PAASTA_ENV),YELP)
+	GOPROXY=http://athens.paasta-norcal-devc.yelp \
+	GO111MODULE=on go build -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
+else
+	GO111MODULE=on go build -v -o paasta_go ./cmd/paasta
+endif
+
 # Steps to release
 # 1. Bump version in Makefile
 # 2. `make release`
