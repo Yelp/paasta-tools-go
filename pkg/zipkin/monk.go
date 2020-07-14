@@ -1,6 +1,6 @@
 // +build yelp
 
-package main
+package zipkin
 
 import (
 	"fmt"
@@ -11,11 +11,11 @@ import (
 	"github.com/openzipkin/zipkin-go/reporter"
 )
 
-const zipkinReporter = "monk"
+type monkInitializer struct{}
 
-func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
+func (*monkInitializer) zipkinInitialize(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	if zipkinURL == "" {
-		zipkinURL = "monk://169.254.255.254:1473/zipkin"
+		return nil, nil, fmt.Errorf("zipkin url missing")
 	}
 
 	reporter, err := reportermonk.NewReporter(zipkinURL)
@@ -42,5 +42,12 @@ func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 		return nil, nil, fmt.Errorf("initializing tracer: %v", err)
 	}
 
-	return reporter, tracer, err
+	return reporter, tracer, nil
+}
+
+func init() {
+	if zipkinInitializers == nil {
+		zipkinInitializers = map[string]zipkinInitializer{}
+	}
+	zipkinInitializers["monk"] = &monkInitializer{}
 }

@@ -3,16 +3,19 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 
+	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	paastaversion "github.com/Yelp/paasta-tools-go/pkg/version"
+	paastazipkin "github.com/Yelp/paasta-tools-go/pkg/zipkin"
 	"github.com/openzipkin/zipkin-go"
+	"k8s.io/klog"
 )
-
-var version = "0.0.5"
 
 // map[string]bool is emulating a set
 func listPaastaCommands() (map[string]bool, error) {
@@ -32,9 +35,18 @@ func listPaastaCommands() (map[string]bool, error) {
 
 func paasta() (int, error) {
 	zipkinURL, _ := os.LookupEnv("PAASTA_ZIPKIN_URL")
-	zr, zt, err := initZipkin(zipkinURL)
+	if zipkinURL == "" {
+		store := configstore.NewStore(
+			"/etc/paasta",
+			map[string]string{"paasta_zipkin_url": "paasta"},
+		)
+		store.Load("paasta_zipkin_url", &zipkinURL)
+	}
+
+	zr, zt, err := paastazipkin.InitZipkin(zipkinURL)
 	if err != nil {
-		return 1, err
+		klog.V(10).Infof("Error initializing zipkin: %s\n", err)
+		err = nil
 	}
 	defer zr.Close()
 
@@ -42,13 +54,9 @@ func paasta() (int, error) {
 	defer spanEntry.Finish()
 
 	spanEntryParent := zipkin.Parent(spanEntry.Context())
-
 	if err != nil {
-		fmt.Fprintf(
-			os.Stderr,
-			"Error initializing zipkin endpoint: %s\n",
-			err,
-		)
+		klog.V(10).Infof("Error initializing zipkin endpoint: %s\n", err)
+		err = nil
 	}
 
 	var subcommand string
@@ -135,15 +143,27 @@ func paasta() (int, error) {
 // os.Exit doesn't work well with defered calls
 func main() {
 	if len(os.Args) > 1 && os.Args[1] == "-version" {
-		fmt.Printf("go-paasta: %v\n", version)
-		fmt.Printf("zipkin: %v\n", zipkinReporter)
-		fmt.Printf("runtime: %v\n", runtime.Version())
+		fmt.Printf("paasta-tools-go version: %v\n", paastaversion.Version)
+		fmt.Printf("zipkin initializers: %v\n", strings.Join(paastazipkin.Initializers(), ", "))
+		fmt.Printf("go runtime: %v\n", runtime.Version())
 		os.Exit(0)
+	}
+
+	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)
+	klog.InitFlags(klogFlags)
+	debug, _ := os.LookupEnv("PAASTA_DEBUG")
+	v := klogFlags.Lookup("v")
+	if v != nil {
+		if debug != "" {
+			v.Value.Set("10")
+		} else {
+			v.Value.Set("0")
+		}
 	}
 
 	exit, err := paasta()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err.Error())
+		klog.V(10).Infof("%v\n", err.Error())
 	}
 	os.Exit(exit)
 }

@@ -1,6 +1,4 @@
-// +build !yelp
-
-package main
+package zipkin
 
 import (
 	"fmt"
@@ -10,9 +8,9 @@ import (
 	reporterhttp "github.com/openzipkin/zipkin-go/reporter/http"
 )
 
-const zipkinReporter = "http"
+type httpInitializer struct{}
 
-func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
+func (*httpInitializer) zipkinInitialize(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	reporter := reporterhttp.NewReporter(zipkinURL)
 
 	localEndpoint, err := zipkin.NewEndpoint("paasta-cli", "localhost:0")
@@ -35,4 +33,11 @@ func initZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	}
 
 	return reporter, tracer, err
+}
+
+func init() {
+	if zipkinInitializers == nil {
+		zipkinInitializers = map[string]zipkinInitializer{}
+	}
+	zipkinInitializers["http"] = &httpInitializer{}
 }
