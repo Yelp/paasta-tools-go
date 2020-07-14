@@ -4,7 +4,7 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
-VERSION=0.0.6
+VERSION=0.0.7
 
 GOBUILD=GO111MODULE=on go build -ldflags="-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION)"
 
