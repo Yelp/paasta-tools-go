@@ -4,11 +4,6 @@ require (
 	github.com/dlespiau/kube-test-harness v0.0.0-20190930170435-ec3f93e1a754
 	github.com/fatih/structs v1.1.0
 	github.com/go-logr/zapr v0.1.1 // indirect
-	github.com/go-openapi/errors v0.19.4
-	github.com/go-openapi/runtime v0.19.15
-	github.com/go-openapi/strfmt v0.19.5
-	github.com/go-openapi/swag v0.19.5
-	github.com/go-openapi/validate v0.19.8
 	github.com/gogo/protobuf v1.2.1 // indirect
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
@@ -25,7 +20,7 @@ require (
 	github.com/subosito/gotenv v1.2.0
 	go.uber.org/zap v1.13.0 // indirect
 	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413 // indirect
-	golang.org/x/oauth2 v0.0.0-20191202225959-858c2ad4c8b6 // indirect
+	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45 // from openapi-codegen
 	golang.org/x/time v0.0.0-20191024005414-555d28b269f0 // indirect
 	gopkg.in/yaml.v2 v2.2.4
 	k8s.io/api v0.0.0-20190409021203-6e4e0e4f393b
