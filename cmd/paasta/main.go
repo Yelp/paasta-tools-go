@@ -142,11 +142,17 @@ func paasta() (int, error) {
 
 // os.Exit doesn't work well with defered calls
 func main() {
-	if len(os.Args) > 1 && os.Args[1] == "-version" {
-		fmt.Printf("paasta-tools-go version: %v\n", paastaversion.Version)
-		fmt.Printf("zipkin initializers: %v\n", strings.Join(paastazipkin.Initializers(), ", "))
-		fmt.Printf("go runtime: %v\n", runtime.Version())
-		os.Exit(0)
+	if len(os.Args) > 1 {
+		if os.Args[1] == "-version" {
+			fmt.Printf("paasta-tools-go version: %v\n", paastaversion.Version)
+			fmt.Printf("paasta-tools version: %v\n", paastaversion.PaastaVersion)
+			fmt.Printf("zipkin initializers: %v\n", strings.Join(paastazipkin.Initializers(), ", "))
+			fmt.Printf("go runtime: %v\n", runtime.Version())
+			os.Exit(0)
+		} else if os.Args[1] == "-V" {
+			fmt.Printf("paasta-tools %v\n", paastaversion.PaastaVersion)
+			os.Exit(0)
+		}
 	}
 
 	klogFlags := flag.NewFlagSet("klog", flag.ExitOnError)

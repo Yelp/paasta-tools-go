@@ -6,7 +6,9 @@ GID:=$(shell id -g)
 GO_VERSION=1.12.7
 VERSION=0.0.7
 
-GOBUILD=GO111MODULE=on go build -ldflags="-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION)"
+GOBUILD=GO111MODULE=on go build -ldflags="\
+	-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION) \
+	-X github.com/Yelp/paasta-tools-go/pkg/version.PaastaVersion=$(PAASTA_VERSION)"
 
 .PHONY: cmd $(CMDS)
 
