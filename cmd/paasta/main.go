@@ -106,6 +106,11 @@ func paasta() (int, error) {
 	spanExec.Tag("args", strings.Join(args, " "))
 	spanExec.Tag("subcommandPath", subcommandPath)
 	spanExec.Tag("subcommand", subcommand)
+	user, ok := os.LookupEnv("SUDO_USER")
+	if !ok {
+		user, _ = os.LookupEnv("USER")
+	}
+	spanExec.Tag("user", user)
 
 	sc := spanExec.Context()
 	env := os.Environ()
