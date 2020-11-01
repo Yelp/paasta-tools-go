@@ -50,22 +50,17 @@ deb_%: clean docker_build_%
 itest_%: deb_%
 	@echo "Built package for $*"
 
-gen-paasta-api:
+openapi-codegen:
 	rm -rf pkg/paastaapi
 	mkdir -p pkg/paastaapi
-	rm swagger.json
-	curl -o swagger.json https://raw.githubusercontent.com/Yelp/paasta/master/paasta_tools/api/api_docs/swagger.json
-	docker run \
-		--rm -it \
-		--user "$$(id -u):$$(id -g)" \
-		-e GOPATH=$$HOME/go:/go \
-		-v $$HOME:$$HOME \
-		-w $$(pwd) quay.io/goswagger/swagger \
-		generate client -f ./swagger.json -t pkg/paastaapi
-	@echo "Due to bug in goswagger you may need to add an import for paastaapi/client/operations"
-	@echo "in pkg/paastaapi/client/paasta_client.go, run 'go build ./...' to check."
-	@echo
-	@echo "Do not forget to 'git add' and 'git commit' updated swagger.json and paasta-api"
+	rm oapi.yaml
+	curl -o oapi.yaml https://raw.githubusercontent.com/Yelp/paasta/master/paasta_tools/api/api_docs/oapi.yaml
+	docker run --rm -i --user `id -u`:`id -g` -v `pwd`:/src -w /src \
+	        yelp/openapi-generator-cli:20201026 \
+	        generate -i oapi.yaml -g go --package-name paastaapi -o pkg/paastaapi
+	# Remove all files except *.go
+	find `pwd`/pkg/paastaapi -mindepth 1 ! -name \*.go -delete
+	@echo "Do not forget to 'git add' and 'git commit' updated oapi.yaml and paasta-api"
 
 paasta_go:
 ifeq ($(PAASTA_ENV),YELP)
