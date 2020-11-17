@@ -65,10 +65,7 @@ func NewDefaultImageProviderForService(service string) *DefaultImageProvider {
 		path.Join("/nail/etc/services", service),
 		map[string]string{"v2": "deployments"},
 	)
-	paastaConfig := configstore.NewStore(
-		"/etc/paasta",
-		map[string]string{"registry": "docker_registry"},
-	)
+	paastaConfig := configstore.NewStore("/etc/paasta", nil)
 	return &DefaultImageProvider{
 		Service:       service,
 		ServiceConfig: serviceConfig,
@@ -96,7 +93,7 @@ func (provider *DefaultImageProvider) DockerImageURLForDeployGroup(deploymentGro
 
 func (provider *DefaultImageProvider) getDockerRegistry() (string, error) {
 	dockerRegistry := &DockerRegistry{Registry: ""}
-	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry)
+	ok, err := provider.PaastaConfig.Load("docker_registry", &dockerRegistry.Registry)
 	if !ok {
 		return "", fmt.Errorf("docker registry not found")
 	}
@@ -143,12 +140,12 @@ func DeploymentAnnotations(
 }
 
 func deploymentsFromConfig(cr *configstore.Store) (*Deployments, error) {
-	deployments := &Deployments{}
-	ok, err := cr.Load("v2", deployments)
+	conf := &V2DeploymentsConfig{}
+	ok, err := cr.Load("v2", conf)
 	if !ok {
 		return nil, fmt.Errorf("deployments not found")
 	}
-	return deployments, err
+	return &Deployments{V2: *conf}, err
 }
 
 func makeControlGroup(service, instance, cluster string) string {

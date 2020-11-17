@@ -21,6 +21,12 @@ type Test struct {
 	envs            map[string]string
 }
 
+// Setup performs necessary initialisation of test case
+//
+// This function should be called at the start of every test case and followed by "defer test.Close()", e.g:
+//
+//    test := framework.Kube.NewTest(t).Setup()
+//    defer test.Close()
 func (t *Test) Setup() *Test {
 	// this bit of defensive programming is to aid unit testing
 	if t.harness.Harness.KubeClient() != nil {
@@ -31,6 +37,12 @@ func (t *Test) Setup() *Test {
 	return t
 }
 
+// StartOperator starts the operator process for test case
+//
+// This function will invoke "operator start" glue target, which will be next monitored in a dedicated Go routine.
+// Test code can receive console output from the operator by setting Operator element of Sinks type when the test
+// framework is initialized with framework.Start function. If the operator process terminates before DefaultOperatorDelay
+// (or -k8s.op-delay) has elapsed, StartOperator function will return an error.
 func (t *Test) StartOperator() error {
 	if t.operatorRunning == true {
 		return fmt.Errorf("operator already started")
@@ -42,6 +54,11 @@ func (t *Test) StartOperator() error {
 	return err
 }
 
+// StopOperator stops the operator process
+//
+// The operator does not have to be running - trying to stop an operator when it is not running is an no-op.  It is
+// OK to start the operator again after it's been stopped, within the scope of same test. There is no need to stop
+// operator explicitly at the end of test using this function, since Close function will do the same.
 func (t *Test) StopOperator() {
 	if t.operatorRunning {
 		stopOperator(t.harness.Options, t.harness.Sinks, t.envs)
@@ -49,15 +66,38 @@ func (t *Test) StopOperator() {
 	}
 }
 
-func (t *Test) RunTarget(name string) error {
-	return runTarget(t.harness.Options, t.harness.Sinks, name, t.envs)
+// RunTarget will invoke arbitrary target from "glue" makefile
+//
+// Note, the actual target name will be prefixed like all other "glue" targets, so assuming default "test" prefix
+// this call test.RunTarget("stuff") will run "test-stuff" target. Extra environment variables can be passed to
+// the invoked target, using the map parameters. These parameters are applied from left to right and never override
+// variables set earlier. In particular, environment variables set inside test.Setup() cannot be overridden.
+// RunTarget function will return an error if the target cannot be found or if it failed execution for any reason.
+func (t *Test) RunTarget(name string, env ... map[string]string) error {
+	envs := t.envs
+	for _, envsInternal := range env {
+		for key, val := range envsInternal {
+			// Do not overwrite env. set previously, especially those in Setup() above
+			if _, ok := envs[key]; !ok {
+				envs[key] = val
+			}
+		}
+	}
+
+	return runTarget(t.harness.Options, t.harness.Sinks, name, envs)
 }
 
+// DeleteDeployment is a shortcut function for deleting a deployment and waiting until it is deleted
+//
+// Note: this function is considered "alpha" and may get deleted or replaced with a different "helper" function.
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 	t.Test.DeleteDeployment(d)
 	t.Test.WaitForDeploymentDeleted(d, timeout)
 }
 
+// Close should be called at the end of each test case
+//
+// Ideally this function should be "deferred" right after test.Setup, as demonstrated above.
 func (t *Test) Close() {
 	// If panicking, let Test.Close() do its thing only and keep the operator running
 	defer func () {

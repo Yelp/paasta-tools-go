@@ -1,11 +1,16 @@
 package deployments
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
 	"sync"
 	"testing"
 
 	"github.com/Yelp/paasta-tools-go/pkg/configstore"
+	"github.com/stretchr/testify/assert"
 )
 
 const (
@@ -14,20 +19,18 @@ const (
 
 func TestDefaultProviderGetDeployment(test *testing.T) {
 	paastaConfigData := &sync.Map{}
-	paastaConfigData.Store("docker_registry", map[string]interface{}{
-		"docker_registry": "fakeregistry.yelp.com",
-	})
+	paastaConfigData.Store("docker_registry", "fakeregistry.yelp.com")
 
 	serviceConfigData := &sync.Map{}
 	serviceConfigData.Store("v2", map[string]interface{}{
 		"deployments": map[string]interface{}{
 			"dev.every": map[string]interface{}{
 				"docker_image": "busybox:latest",
-				"git_sha":      "03d6f783c99695af0e716588abb9ba83ac957be2",
+				"git_sha":      "abc123",
 			},
 			"test.every": map[string]interface{}{
 				"docker_image": "ubuntu:latest",
-				"git_sha":      "f3d6f783c99695af0e716588abb9ba83ac957be3",
+				"git_sha":      "abc123",
 			},
 		},
 	})
@@ -71,6 +74,56 @@ func TestMakeControlGroup(test *testing.T) {
 	}
 }
 
+func TestDeploymentsFromConfig(test *testing.T) {
+	// create fake deployments file
+	data, err := json.MarshalIndent(
+		map[string]interface{}{
+			"v2": map[string]interface{}{
+				"deployments": map[string]interface{}{
+					"deploy.group": map[string]interface{}{
+						"docker_image": "image-abc123",
+						"git_sha":      "abc123",
+					},
+				},
+				"controls": map[string]interface{}{
+					"a_service:a_cluster.an_instance": map[string]interface{}{
+						"desired_state": "resurrection",
+						"force_bounce":  nil,
+					},
+				},
+			},
+		},
+		"",
+		"  ",
+	)
+	if err != nil {
+		test.Error("Failed to serialize test deployment JSON")
+	}
+
+	tempDir, err := ioutil.TempDir(os.TempDir(), "paasta-tools-go-test-service-*")
+	if err != nil {
+		test.Error("Failed to create temp services dir")
+	}
+	defer os.Remove(tempDir)
+	err = ioutil.WriteFile(path.Join(tempDir, "deployments.json"), data, 0644)
+	if err != nil {
+		test.Error("Failed to write to deployments.json")
+	}
+
+	// now actually try to load the deployments
+	configStore := configstore.NewStore(tempDir, map[string]string{"v2": "deployments"})
+
+	deployments, err := deploymentsFromConfig(configStore)
+
+	assert.NoError(test, err)
+	assert.Equal(test, "abc123", deployments.V2.Deployments["deploy.group"].GitSHA)
+	assert.Equal(
+		test,
+		"resurrection",
+		deployments.V2.Controls["a_service:a_cluster.an_instance"].DesiredState,
+	)
+}
+
 func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 	fakeDeployments := &Deployments{
 		V2: V2DeploymentsConfig{
@@ -105,10 +158,19 @@ func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 }
 
 func TestDefaultGetRegistry(t *testing.T) {
-	paastaConfigData := &sync.Map{}
-	paastaConfigData.Store("docker_registry", map[string]interface{}{
-		"docker_registry": "fakeregistry.yelp.com",
-	})
+	dir, err := ioutil.TempDir("", "deployments-test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(dir)
+	err = ioutil.WriteFile(
+		fmt.Sprintf("%v/docker_registry.json", dir),
+		[]byte(`{"docker_registry": "fakeregistry.yelp.com"}`),
+		0644,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	serviceConfigData := &sync.Map{}
 	serviceConfigData.Store("v2", map[string]interface{}{
@@ -116,7 +178,7 @@ func TestDefaultGetRegistry(t *testing.T) {
 	})
 
 	imageProvider := DefaultImageProvider{
-		PaastaConfig:  &configstore.Store{Data: paastaConfigData},
+		PaastaConfig:  configstore.NewStore(dir, nil),
 		ServiceConfig: &configstore.Store{Data: serviceConfigData},
 	}
 	url, err := imageProvider.getDockerRegistry()

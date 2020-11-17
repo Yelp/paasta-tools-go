@@ -4,7 +4,11 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.12.7
-VERSION=0.0.2
+VERSION=0.0.12
+
+GOBUILD=GO111MODULE=on go build -ldflags="\
+	-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION) \
+	-X github.com/Yelp/paasta-tools-go/pkg/version.PaastaVersion=$(PAASTA_VERSION)"
 
 .PHONY: cmd $(CMDS)
 
@@ -13,7 +17,7 @@ test:
 	GO111MODULE=on go test -failfast -v ./...
 
 build:
-	GO111MODULE=on go build -v ./...
+	$(GOBUILD) -v ./...
 
 clean:
 	rm -rf bin
@@ -21,9 +25,9 @@ clean:
 
 cmd: cmd/*
 
-$(CMDS): 
+$(CMDS):
 	[ -d bin ] || mkdir -p bin
-	GO111MODULE=on go build -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
+	$(GOBUILD) -o bin/paasta-tools-$(subst cmd/,,$@) $@/*.go
 
 docker_build_%:
 	@echo "Building build docker image for $*"
@@ -46,14 +50,40 @@ deb_%: clean docker_build_%
 itest_%: deb_%
 	@echo "Built package for $*"
 
-gen-paasta-api:
-	rm -rf pkg/paasta_api/*
-	curl -o swagger.json https://raw.githubusercontent.com/Yelp/paasta/master/paasta_tools/api/api_docs/swagger.json
-	docker run \
-		--rm -it \
-		--user "$$(id -u):$$(id -g)" \
-		-e GOPATH=$$HOME/go:/go \
-		-v $$HOME:$$HOME \
-		-w $$(pwd) quay.io/goswagger/swagger \
-		generate client -f ./swagger.json -t pkg/paasta_api
-	@echo "Do not forget to `git add` and `git commit` updated swagger.json and paasta-api"
+openapi-codegen:
+	rm -rf pkg/paastaapi
+	mkdir -p pkg/paastaapi
+	rm oapi.yaml
+	curl -o oapi.yaml https://raw.githubusercontent.com/Yelp/paasta/master/paasta_tools/api/api_docs/oapi.yaml
+	docker run --rm -i --user `id -u`:`id -g` -v `pwd`:/src -w /src \
+	        yelp/openapi-generator-cli:20201026 \
+	        generate -i oapi.yaml -g go --package-name paastaapi -o pkg/paastaapi
+	# Remove all files except *.go
+	find `pwd`/pkg/paastaapi -mindepth 1 ! -name \*.go -delete
+	@echo "Do not forget to 'git add' and 'git commit' updated oapi.yaml and paasta-api"
+
+paasta_go:
+ifeq ($(PAASTA_ENV),YELP)
+	GONOSUMDB=*.yelpcorp.com \
+	GOPROXY=http://athens.paasta-norcal-devc.yelp \
+	$(GOBUILD) -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
+else
+	$(GOBUILD) -v -o paasta_go ./cmd/paasta
+endif
+
+# Steps to release
+# 1. Bump version in Makefile
+# 2. `make release`
+release:
+	# docker run -it --rm -v "$(pwd)":/usr/local/src/paasta-tools-go \
+	# 	ferrarimarco/github-changelog-generator \
+	# 	-u Yelp \
+	# 	-p paasta-tools-go \
+	# 	--max-issues=100 \
+	# 	--future-release $(VERSION) \
+	# 	--output ../CHANGELOG.md
+	@git diff
+	@echo "Now Run:"
+	@echo 'git commit -a -m "Released $(VERSION) via make release"'
+	@echo 'git tag -a -m "Released $(VERSION) via make release" v$(VERSION)'
+	@echo 'git push --tags origin master'
