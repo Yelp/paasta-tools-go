@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"reflect"
+	"fmt"
+	"io/ioutil"
+	"net/http"
 	"regexp"
 	"strings"
 	"testing"
@@ -10,38 +13,30 @@ import (
 
 	"github.com/Yelp/paasta-tools-go/pkg/cli"
 
-	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/models"
-
-	"github.com/go-openapi/runtime"
 	"github.com/stretchr/testify/assert"
-
-	operations "github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/operations"
 )
 
-type MockTransport struct {
-	Ops []*runtime.ClientOperation
+type recordingTransport struct {
+	req []*http.Request
 }
 
-func (m *MockTransport) Submit(co *runtime.ClientOperation) (interface{}, error) {
-	m.Ops = append(m.Ops, co)
-	return &operations.MetastatusOK{
-		Payload: &models.MetaStatus{
-			Output: "foo",
-		},
+func (t *recordingTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	t.req = append(t.req, req)
+	return &http.Response{
+		StatusCode: 200,
+		Body:       ioutil.NopCloser(bytes.NewReader([]byte("{}"))),
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
 	}, nil
 }
 
-func (m *MockTransport) Reset() {
-	m.Ops = []*runtime.ClientOperation{}
-}
-
 func makeTestContext() context.Context {
-	t := &MockTransport{}
-	err := &strings.Builder{}
-	out := &strings.Builder{}
-	ctx := context.WithValue(context.Background(), ctxKeyTransport, t)
-	ctx = context.WithValue(ctx, ctxKeyOut, out)
-	ctx = context.WithValue(ctx, ctxKeyErr, err)
+	t := &recordingTransport{}
+	t.req = make([]*http.Request, 0)
+	cl := &http.Client{Transport: t}
+	fmt.Printf("%p\n", cl)
+	ctx := context.WithValue(context.Background(), ctxKeyHTTPClient, cl)
+	ctx = context.WithValue(ctx, ctxKeyOut, &strings.Builder{})
+	ctx = context.WithValue(ctx, ctxKeyErr, &strings.Builder{})
 	return ctx
 }
 
@@ -60,20 +55,21 @@ func TestMetastatus(test *testing.T) {
 		mockCmdArgs,
 	)
 
-	transport := ctx.Value(ctxKeyTransport).(*MockTransport)
-	if len(transport.Ops) != 1 {
-		test.Logf("opes: %v", transport.Ops)
-		test.Errorf("expected number of operations: 1, got: %v", len(transport.Ops))
+	cl := ctx.Value(ctxKeyHTTPClient).(*http.Client)
+	tr := cl.Transport.(*recordingTransport)
+	if len(tr.req) != 1 {
+		test.Logf("requests: %v", tr.req)
+		test.Errorf("expected number of requests: 1, got: %v", len(tr.req))
 	}
 
-	metastatusOp := transport.Ops[0]
-	if metastatusOp.PathPattern != "/metastatus" {
-		test.Errorf("unexpected path: %v", metastatusOp.PathPattern)
+	request := tr.req[0]
+	if request.URL.Path != "/v1/metastatus" {
+		test.Errorf("unexpected path: %v", request.URL.Path)
 	}
 
-	params := metastatusOp.Params.(*operations.MetastatusParams)
-	if !reflect.DeepEqual(params.CmdArgs, mockCmdArgs) {
-		test.Errorf("expected mock args: %v, actual: %v", mockCmdArgs, params.CmdArgs)
+	query := request.URL.RawQuery
+	if query != "cmd_args=foo%2Cbar" {
+		test.Errorf("expected mock args: %v, actual: %v", mockCmdArgs, query)
 	}
 
 	errf := ctx.Value(ctxKeyErr).(*strings.Builder)

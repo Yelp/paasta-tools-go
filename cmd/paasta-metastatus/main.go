@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"strings"
@@ -16,11 +17,7 @@ import (
 	"github.com/Yelp/paasta-tools-go/pkg/configstore"
 	"github.com/logrusorgru/aurora"
 
-	apiclient "github.com/Yelp/paasta-tools-go/pkg/paasta_api/client"
-	"github.com/Yelp/paasta-tools-go/pkg/paasta_api/client/operations"
-	"github.com/go-openapi/runtime"
-	httptransport "github.com/go-openapi/runtime/client"
-	"github.com/go-openapi/strfmt"
+	"github.com/Yelp/paasta-tools-go/pkg/paastaapi"
 )
 
 // PaastaMetastatusOptions ...
@@ -115,7 +112,7 @@ func buildMetastatusCmdArgs(opts *PaastaMetastatusOptions) ([]string, time.Durat
 type ctxKey int
 
 const (
-	ctxKeyTransport ctxKey = iota
+	ctxKeyHTTPClient ctxKey = iota
 	ctxKeyOut
 	ctxKeyErr
 )
@@ -131,21 +128,22 @@ func writeAPIStatus(
 		return fmt.Errorf("Failed to parse API endpoint %v: %v", endpoint, err)
 	}
 
-	var transport runtime.ClientTransport
-	ctxTransport := ctx.Value(ctxKeyTransport)
-	if ctxTransport != nil {
-		transport = ctxTransport.(runtime.ClientTransport)
-	} else {
-		transport = httptransport.New(url.Host, apiclient.DefaultBasePath, []string{url.Scheme})
+	config := paastaapi.NewConfiguration()
+	config.Host = url.Host
+	config.Scheme = url.Scheme
+
+	httpClient := ctx.Value(ctxKeyHTTPClient)
+	if httpClient != nil {
+		config.HTTPClient = httpClient.(*http.Client)
 	}
 
-	client := apiclient.New(transport, strfmt.Default)
-	mp := &operations.MetastatusParams{CmdArgs: cmdArgs, Context: ctx}
-	resp, err := client.Operations.Metastatus(mp)
+	client := paastaapi.NewAPIClient(config)
+	mr := client.DefaultApi.Metastatus(ctx).CmdArgs(cmdArgs)
+	metastatusResp, _, err := mr.Execute()
 	if err != nil {
 		return fmt.Errorf("Failed to get metastatus: %s", aurora.Red(err))
 	}
-	sb.WriteString(fmt.Sprintf("%s\n", resp.Payload.Output))
+	sb.WriteString(fmt.Sprintf("%s\n", metastatusResp.GetOutput()))
 	return nil
 }
 
