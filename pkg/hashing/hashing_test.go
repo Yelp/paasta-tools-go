@@ -1,12 +1,13 @@
 package hashing
 
 import (
+	"testing"
+
 	assert "github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	resource "k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"testing"
 )
 
 func TestGetHashForKubernetesObject(t *testing.T) {
@@ -167,7 +168,7 @@ func TestSetKubernetesObjectHash(t *testing.T) {
 
 func TestMultipleLevels(t *testing.T) {
 	labels := map[string]string{
-		"yelp.com/rick": "andmortyadventures",
+		"yelp.com/foo": "bar",
 	}
 	oneCPU, _ := resource.ParseQuantity(string("0.1"))
 	twoCPU, _ := resource.ParseQuantity(string("0.2"))
@@ -245,4 +246,93 @@ func TestMultipleLevels(t *testing.T) {
 	hashTwo, _ := ComputeHashForKubernetesObject(two)
 
 	assert.NotEqual(t, hashOne, hashTwo)
+}
+
+func TestGetKubernetesObjectHash(t *testing.T) {
+	labels := map[string]string{
+		"yelp.com/foo": "bar",
+	}
+	oneCPU, _ := resource.ParseQuantity(string("0.1"))
+	twoCPU, _ := resource.ParseQuantity(string("0.2"))
+	replicas := int32(2)
+	one := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "morty-test-cluster",
+			Namespace: "paasta-cassandra",
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{},
+					Containers: []corev1.Container{
+						corev1.Container{
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU: oneCPU,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	targetHash := "abcde12345"
+	labels = map[string]string{
+		"yelp.com/foo":     "bar",
+		ObjectHashLabelKey: targetHash,
+	}
+	two := &appsv1.Deployment{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "morty-test-cluster",
+			Namespace: "paasta-cassandra",
+			Labels:    labels,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Volumes: []corev1.Volume{},
+					Containers: []corev1.Container{
+						corev1.Container{
+							Resources: corev1.ResourceRequirements{
+								Limits: corev1.ResourceList{
+									corev1.ResourceCPU: twoCPU,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	hashOne, _ := GetKubernetesObjectHash(one)
+	hashTwo, _ := GetKubernetesObjectHash(two)
+
+	assert.Equal(t, hashOne, "")
+	assert.Equal(t, hashTwo, targetHash)
+
 }
