@@ -10,6 +10,7 @@ require (
 	github.com/go-openapi/swag v0.19.5
 	github.com/go-openapi/validate v0.19.8
 	github.com/gogo/protobuf v1.2.1 // indirect
+	github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
 	github.com/golang/groupcache v0.0.0-20191227052852-215e87163ea7 // indirect
 	github.com/hashicorp/golang-lru v0.5.3 // indirect
 	github.com/imdario/mergo v0.3.8 // indirect
