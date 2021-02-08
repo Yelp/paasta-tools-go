@@ -31,6 +31,34 @@ var DefaultFsGroup int64 = 65534
 
 var serviceAccountRegex = regexp.MustCompile("[^0-9a-zA-Z]+")
 
+func (in *IamRoleConfig) DeepCopyInto(out *IamRoleConfig) {
+	*out = *in
+	if in.IamRoleProvider != nil {
+		in, out := &in.IamRoleProvider, &out.IamRoleProvider
+		*out = new(string)
+		**out = **in
+	}
+	if in.IamRole != nil {
+		in, out := &in.IamRole, &out.IamRole
+		*out = new(string)
+		**out = **in
+	}
+	if in.FsGroup != nil {
+		in, out := &in.FsGroup, &out.FsGroup
+		*out = new(int64)
+		**out = **in
+	}
+}
+
+func (in *IamRoleConfig) DeepCopy() *IamRoleConfig {
+	if in == nil {
+		return nil
+	}
+	out := new(IamRoleConfig)
+	in.DeepCopyInto(out)
+	return out
+}
+
 // SetIamRoleConfigDefaults: sets the default values for the AWS IAM role config
 func SetIamRoleConfigDefaults(iamRoleConfig *IamRoleConfig) {
 	if iamRoleConfig.IamRoleProvider == nil {
