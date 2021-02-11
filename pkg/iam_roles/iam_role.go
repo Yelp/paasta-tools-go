@@ -2,7 +2,6 @@ package iam_role
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/golang/glog"
 	corev1 "k8s.io/api/core/v1"
@@ -70,15 +69,18 @@ func SetIamRoleConfigDefaults(iamRoleConfig *IamRoleConfig) {
 }
 
 // EnsureForIamRole: prepare AWS IAM role for use
-func EnsureForIamRole(ctx context.Context, client controllerruntimeclient.Client, namespace string, iamRoleConfig *IamRoleConfig) error {
+func EnsureForIamRole(ctx context.Context, client controllerruntimeclient.Client, namespace string, iamRoleConfig *IamRoleConfig, defaultIamRole string) error {
 	// We need to create a service account only for "aws" provider
 	if iamRoleConfig.IamRoleProvider != nil && *iamRoleConfig.IamRoleProvider == "aws" {
 		glog.V(4).Infof("Ensuring service account in %s for iam_role %v exists", namespace, iamRoleConfig.IamRole)
+		var iamRole *string
 		if iamRoleConfig.IamRole == nil {
-			return fmt.Errorf("%s/%v: iam_role must be specified when iam_role_provider is set to 'aws'", namespace, iamRoleConfig.IamRole)
+			iamRole = &defaultIamRole
+		} else {
+			iamRole = iamRoleConfig.IamRole
 		}
 
-		saName := getServiceAccountNameForIamRole(iamRoleConfig.IamRole)
+		saName := getServiceAccountNameForIamRole(iamRole)
 
 		// check if service account with this name+namespace already exists
 		glog.V(4).Infof("Looking for service account called %s in namespace %s", saName, namespace)
@@ -96,7 +98,7 @@ func EnsureForIamRole(ctx context.Context, client controllerruntimeclient.Client
 			if errors.IsNotFound(err) {
 				glog.Infof("Service account not found, creating it")
 				annotations := map[string]string{
-					"eks.amazonaws.com/role-arn": *iamRoleConfig.IamRole,
+					"eks.amazonaws.com/role-arn": *iamRole,
 				}
 				service_account := &corev1.ServiceAccount{
 					TypeMeta: v1.TypeMeta{},
