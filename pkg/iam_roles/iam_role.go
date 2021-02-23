@@ -130,6 +130,15 @@ func EnsureForIamRole(ctx context.Context, client controllerruntimeclient.Client
 
 // UpdatePodTemplateSpecForIamRole: updates provided pod template specs for kiam or AWS pod identity
 func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, iamRoleConfig *IamRoleConfig, defaultIamRole string) {
+	var iamRole *string
+	if iamRoleConfig.IamRole != nil {
+		iamRole = iamRoleConfig.IamRole
+	} else {
+		iamRole = &defaultIamRole
+	}
+	if podTemplateSpec.Annotations == nil {
+		podTemplateSpec.Annotations = map[string]string{}
+	}
 	if iamRoleConfig.IamRoleProvider != nil && *iamRoleConfig.IamRoleProvider == "aws" {
 		var fsGroup *int64
 		if iamRoleConfig.FsGroup != nil {
@@ -140,17 +149,8 @@ func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, ia
 		podTemplateSpec.Spec.SecurityContext = &corev1.PodSecurityContext{FSGroup: fsGroup}
 
 		// generate "normalized" SA name from iamRole
-		podTemplateSpec.Spec.ServiceAccountName = getServiceAccountNameForIamRole(iamRoleConfig.IamRole)
+		podTemplateSpec.Spec.ServiceAccountName = getServiceAccountNameForIamRole(iamRole)
 	} else {
-		var iamRole *string
-		if iamRoleConfig.IamRole != nil {
-			iamRole = iamRoleConfig.IamRole
-		} else {
-			iamRole = &defaultIamRole
-		}
-		if podTemplateSpec.Annotations == nil {
-			podTemplateSpec.Annotations = map[string]string{}
-		}
 		podTemplateSpec.Annotations["iam.amazonaws.com/role"] = *iamRole
 		podTemplateSpec.Spec.SecurityContext = &corev1.PodSecurityContext{}
 		podTemplateSpec.Spec.ServiceAccountName = ""
