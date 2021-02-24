@@ -136,9 +136,6 @@ func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, ia
 	} else {
 		iamRole = &defaultIamRole
 	}
-	if podTemplateSpec.Annotations == nil {
-		podTemplateSpec.Annotations = map[string]string{}
-	}
 	if iamRoleConfig.IamRoleProvider != nil && *iamRoleConfig.IamRoleProvider == "aws" {
 		var fsGroup *int64
 		if iamRoleConfig.FsGroup != nil {
@@ -151,6 +148,9 @@ func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, ia
 		// generate "normalized" SA name from iamRole
 		podTemplateSpec.Spec.ServiceAccountName = getServiceAccountNameForIamRole(iamRole)
 	} else {
+		if podTemplateSpec.Annotations == nil {
+			podTemplateSpec.Annotations = map[string]string{}
+		}
 		podTemplateSpec.Annotations["iam.amazonaws.com/role"] = *iamRole
 		podTemplateSpec.Spec.SecurityContext = &corev1.PodSecurityContext{}
 		podTemplateSpec.Spec.ServiceAccountName = ""
