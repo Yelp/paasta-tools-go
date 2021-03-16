@@ -25,7 +25,7 @@ type IamRoleConfig struct {
 	FsGroup *int64 `json:"fs_group,omitempty"`
 }
 
-var defaultIamRoleProvider = "kiam"
+var defaultIamRoleProvider = "aws"
 var DefaultFsGroup int64 = 65534
 
 var serviceAccountRegex = regexp.MustCompile("[^0-9a-zA-Z]+")
