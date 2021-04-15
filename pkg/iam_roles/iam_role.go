@@ -129,7 +129,7 @@ func EnsureForIamRole(ctx context.Context, client controllerruntimeclient.Client
 }
 
 // UpdatePodTemplateSpecForIamRole: updates provided pod template specs for kiam or AWS pod identity
-func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, iamRoleConfig *IamRoleConfig, defaultIamRole string) {
+func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, iamRoleConfig *IamRoleConfig, defaultIamRole string, defaultFsGroup int64) {
 	var iamRole *string
 	if iamRoleConfig.IamRole != nil {
 		iamRole = iamRoleConfig.IamRole
@@ -141,7 +141,7 @@ func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, ia
 		if iamRoleConfig.FsGroup != nil {
 			fsGroup = iamRoleConfig.FsGroup
 		} else {
-			fsGroup = &DefaultFsGroup
+			fsGroup = &defaultFsGroup
 		}
 		podTemplateSpec.Spec.SecurityContext = &corev1.PodSecurityContext{FSGroup: fsGroup}
 
