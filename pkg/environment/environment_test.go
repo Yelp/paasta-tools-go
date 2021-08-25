@@ -42,6 +42,14 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "PAASTA_HOST",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "spec.nodeName",
+				},
+			},
+		},
 	}
 
 	if !reflect.DeepEqual(actual, fakeEnvironment) {

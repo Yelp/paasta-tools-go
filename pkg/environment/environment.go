@@ -38,6 +38,14 @@ func GetDefaultPaastaKubernetesEnvironment() []corev1.EnvVar {
 				},
 			},
 		},
+		{
+			Name: "PAASTA_HOST",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "spec.nodeName",
+				},
+			},
+		},
 	}
 	return defaultEnvironment
 }
