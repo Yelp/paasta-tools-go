@@ -2,4 +2,5 @@
 dist
 bin
 .idea/*
+/paasta-metastatus
 /paasta_go
