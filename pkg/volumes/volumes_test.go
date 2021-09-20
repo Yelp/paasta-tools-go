@@ -10,11 +10,20 @@ import (
 
 func TestDefaultVolumesFromReader(test *testing.T) {
 	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", []map[string]interface{}{
-		map[string]interface{}{
-			"hostPath":      "/foo",
-			"containerPath": "/bar",
-			"mode":          "RO",
+	fakeVolumeConfig.Store("volumes", map[string]interface{}{
+		"volumes": []map[string]string{
+			{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
+		},
+		"hacheck_sidecar_volumes": []map[string]string{
+			{
+				"hostPath":      "/foo1",
+				"containerPath": "/bar1",
+				"mode":          "RW",
+			},
 		},
 	})
 	reader := &configstore.Store{Data: fakeVolumeConfig}
@@ -24,6 +33,36 @@ func TestDefaultVolumesFromReader(test *testing.T) {
 	}
 	expectedVolume := []Volume{
 		Volume{HostPath: "/foo", ContainerPath: "/bar", Mode: "RO"},
+	}
+	if !reflect.DeepEqual(actual, expectedVolume) {
+		test.Errorf("Expected:\n%+v\nGot:\n%+v", actual, expectedVolume)
+	}
+}
+func TestDefaultHealthcheckVolumesFromReader(test *testing.T) {
+	fakeVolumeConfig := &sync.Map{}
+	fakeVolumeConfig.Store("volumes", map[string]interface{}{
+		"volumes": []map[string]string{
+			{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
+		},
+		"hacheck_sidecar_volumes": []map[string]string{
+			{
+				"hostPath":      "/foo1",
+				"containerPath": "/bar1",
+				"mode":          "RW",
+			},
+		},
+	})
+	reader := &configstore.Store{Data: fakeVolumeConfig}
+	actual, err := DefaultHealthcheckVolumesFromReader(reader)
+	if err != nil {
+		test.Errorf("failed to read config")
+	}
+	expectedVolume := []Volume{
+		Volume{HostPath: "/foo1", ContainerPath: "/bar1", Mode: "RW"},
 	}
 	if !reflect.DeepEqual(actual, expectedVolume) {
 		test.Errorf("Expected:\n%+v\nGot:\n%+v", actual, expectedVolume)

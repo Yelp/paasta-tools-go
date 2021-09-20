@@ -60,3 +60,14 @@ func GetDefaultPaastaKubernetesVolumes(configStore *configstore.Store) ([]corev1
 	volumeMounts, volumes := paastaVolumesToKubernetesVolumes(pvolumes)
 	return volumeMounts, volumes, err
 }
+
+func GetDefaultPaastaKubernetesHealthcheckVolumes(configStore *configstore.Store) ([]corev1.VolumeMount, []corev1.Volume, error) {
+	pvolumes, err := DefaultHealthcheckVolumesFromReader(configStore)
+	if err != nil {
+		err = fmt.Errorf("Error finding default healthcheck volumes: %s", err)
+		log.Print(err)
+		return nil, nil, err
+	}
+	volumeMounts, volumes := paastaVolumesToKubernetesVolumes(pvolumes)
+	return volumeMounts, volumes, err
+}

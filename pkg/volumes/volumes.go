@@ -7,7 +7,8 @@ import (
 )
 
 type VolumeConfig struct {
-	Volumes []Volume `json:"volumes" mapstructure:"volumes"`
+	Volumes               []Volume `json:"volumes" mapstructure:"volumes"`
+	HacheckSidecarVolumes []Volume `json:"hacheck_sidecar_volumes" mapstructure:"hacheck_sidecar_volumes"`
 }
 
 type Volume struct {
@@ -16,11 +17,27 @@ type Volume struct {
 	Mode          string `json:"mode" mapstructure:"mode"`
 }
 
-func DefaultVolumesFromReader(configStore *configstore.Store) ([]Volume, error) {
-	volumeConfig := &VolumeConfig{Volumes: []Volume{}}
-	ok, err := configStore.Load("volumes", &volumeConfig.Volumes)
+func DefaultVolumeConfigFromReader(configStore *configstore.Store) (*VolumeConfig, error) {
+	volumeConfig := &VolumeConfig{}
+	ok, err := configStore.Load("volumes", &volumeConfig)
 	if !ok {
 		return nil, fmt.Errorf("volumes not found")
 	}
+	return volumeConfig, err
+}
+
+func DefaultVolumesFromReader(configStore *configstore.Store) ([]Volume, error) {
+	volumeConfig, err := DefaultVolumeConfigFromReader(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("volumes not found")
+	}
 	return volumeConfig.Volumes, err
+}
+
+func DefaultHealthcheckVolumesFromReader(configStore *configstore.Store) ([]Volume, error) {
+	volumeConfig, err := DefaultVolumeConfigFromReader(configStore)
+	if err != nil {
+		return nil, fmt.Errorf("volumes not found")
+	}
+	return volumeConfig.HacheckSidecarVolumes, err
 }

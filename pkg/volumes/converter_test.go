@@ -74,11 +74,20 @@ func TestFormatMountName(t *testing.T) {
 
 func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
 	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", []map[string]interface{}{
-		map[string]interface{}{
-			"hostPath":      "/foo",
-			"containerPath": "/bar",
-			"mode":          "RO",
+	fakeVolumeConfig.Store("volumes", map[string]interface{}{
+		"volumes": []map[string]string{
+			{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
+		},
+		"hacheck_sidecar_volumes": []map[string]string{
+			{
+				"hostPath":      "/foo1",
+				"containerPath": "/bar1",
+				"mode":          "RW",
+			},
 		},
 	})
 	reader := &configstore.Store{Data: fakeVolumeConfig}
@@ -100,6 +109,55 @@ func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
 			VolumeSource: corev1.VolumeSource{
 				HostPath: &corev1.HostPathVolumeSource{
 					Path: "/foo",
+				},
+			},
+		},
+	}
+	if !reflect.DeepEqual(volumeMounts, expectedMounts) {
+		t.Errorf("Expected:\n%+v\nGot:\n%+v", expectedMounts, volumeMounts)
+	}
+	if !reflect.DeepEqual(volumes, expectedVolumes) {
+		t.Errorf("Expected:\n%+v\nGot:\n%+v", expectedVolumes, volumes)
+	}
+}
+
+func TestGetDefaultPaastaKubernetesHealthcheckVolumes(t *testing.T) {
+	fakeVolumeConfig := &sync.Map{}
+	fakeVolumeConfig.Store("volumes", map[string]interface{}{
+		"volumes": []map[string]string{
+			{
+				"hostPath":      "/foo",
+				"containerPath": "/bar",
+				"mode":          "RO",
+			},
+		},
+		"hacheck_sidecar_volumes": []map[string]string{
+			{
+				"hostPath":      "/foo1",
+				"containerPath": "/bar1",
+				"mode":          "RW",
+			},
+		},
+	})
+	reader := &configstore.Store{Data: fakeVolumeConfig}
+	volumeMounts, volumes, err := GetDefaultPaastaKubernetesHealthcheckVolumes(reader)
+	if err != nil {
+		t.Errorf("Error %s", err)
+	}
+	expectedMounts := []corev1.VolumeMount{
+		corev1.VolumeMount{
+			Name:      "foo1",
+			MountPath: "/bar1",
+			ReadOnly:  false,
+		},
+	}
+
+	expectedVolumes := []corev1.Volume{
+		{
+			Name: "foo1",
+			VolumeSource: corev1.VolumeSource{
+				HostPath: &corev1.HostPathVolumeSource{
+					Path: "/foo1",
 				},
 			},
 		},
