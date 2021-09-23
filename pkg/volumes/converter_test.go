@@ -11,12 +11,12 @@ import (
 
 func TestPaastaVolumesToKubernetesVolumes(t *testing.T) {
 	fakeVols := []Volume{
-		Volume{
+		{
 			HostPath:      "/tmp/rw",
 			ContainerPath: "/tmp/bar",
 			Mode:          "RW",
 		},
-		Volume{
+		{
 			HostPath:      "/tmp/ro",
 			ContainerPath: "/tmp/bar",
 			Mode:          "RO",
@@ -24,12 +24,12 @@ func TestPaastaVolumesToKubernetesVolumes(t *testing.T) {
 	}
 	volumeMounts, volumes := paastaVolumesToKubernetesVolumes(fakeVols)
 	expectedMounts := []corev1.VolumeMount{
-		corev1.VolumeMount{
+		{
 			Name:      "tmp-rw",
 			MountPath: "/tmp/bar",
 			ReadOnly:  false,
 		},
-		corev1.VolumeMount{
+		{
 			Name:      "tmp-ro",
 			MountPath: "/tmp/bar",
 			ReadOnly:  true,
@@ -74,29 +74,21 @@ func TestFormatMountName(t *testing.T) {
 
 func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
 	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", map[string]interface{}{
-		"volumes": []map[string]string{
-			{
-				"hostPath":      "/foo",
-				"containerPath": "/bar",
-				"mode":          "RO",
-			},
+	fakeVolumeConfig.Store("volumes", []map[string]string{
+		{
+			"hostPath":      "/foo",
+			"containerPath": "/bar",
+			"mode":          "RO",
 		},
-		"hacheck_sidecar_volumes": []map[string]string{
-			{
-				"hostPath":      "/foo1",
-				"containerPath": "/bar1",
-				"mode":          "RW",
-			},
-		},
-	})
+	},
+	)
 	reader := &configstore.Store{Data: fakeVolumeConfig}
 	volumeMounts, volumes, err := GetDefaultPaastaKubernetesVolumes(reader)
 	if err != nil {
 		t.Errorf("Error %s", err)
 	}
 	expectedMounts := []corev1.VolumeMount{
-		corev1.VolumeMount{
+		{
 			Name:      "foo",
 			MountPath: "/bar",
 			ReadOnly:  true,
@@ -123,29 +115,20 @@ func TestGetDefaultPaastaKubernetesVolumes(t *testing.T) {
 
 func TestGetDefaultPaastaKubernetesHealthcheckVolumes(t *testing.T) {
 	fakeVolumeConfig := &sync.Map{}
-	fakeVolumeConfig.Store("volumes", map[string]interface{}{
-		"volumes": []map[string]string{
-			{
-				"hostPath":      "/foo",
-				"containerPath": "/bar",
-				"mode":          "RO",
-			},
-		},
-		"hacheck_sidecar_volumes": []map[string]string{
-			{
-				"hostPath":      "/foo1",
-				"containerPath": "/bar1",
-				"mode":          "RW",
-			},
-		},
-	})
+	fakeVolumeConfig.Store("hacheck_sidecar_volumes", []map[string]string{{
+		"hostPath":      "/foo1",
+		"containerPath": "/bar1",
+		"mode":          "RW",
+	},
+	},
+	)
 	reader := &configstore.Store{Data: fakeVolumeConfig}
 	volumeMounts, volumes, err := GetDefaultPaastaKubernetesHealthcheckVolumes(reader)
 	if err != nil {
 		t.Errorf("Error %s", err)
 	}
 	expectedMounts := []corev1.VolumeMount{
-		corev1.VolumeMount{
+		{
 			Name:      "foo1",
 			MountPath: "/bar1",
 			ReadOnly:  false,

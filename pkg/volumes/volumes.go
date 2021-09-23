@@ -17,26 +17,19 @@ type Volume struct {
 	Mode          string `json:"mode" mapstructure:"mode"`
 }
 
-func DefaultVolumeConfigFromReader(configStore *configstore.Store) (*VolumeConfig, error) {
-	volumeConfig := &VolumeConfig{}
-	ok, err := configStore.Load("volumes", &volumeConfig)
-	if !ok {
-		return nil, fmt.Errorf("volumes not found")
-	}
-	return volumeConfig, err
-}
-
 func DefaultVolumesFromReader(configStore *configstore.Store) ([]Volume, error) {
-	volumeConfig, err := DefaultVolumeConfigFromReader(configStore)
-	if err != nil {
+	volumeConfig := &VolumeConfig{}
+	ok, err := configStore.Load("volumes", &volumeConfig.Volumes)
+	if !ok {
 		return nil, fmt.Errorf("volumes not found")
 	}
 	return volumeConfig.Volumes, err
 }
 
 func DefaultHealthcheckVolumesFromReader(configStore *configstore.Store) ([]Volume, error) {
-	volumeConfig, err := DefaultVolumeConfigFromReader(configStore)
-	if err != nil {
+	volumeConfig := &VolumeConfig{}
+	ok, err := configStore.Load("hacheck_sidecar_volumes", &volumeConfig.HacheckSidecarVolumes)
+	if !ok {
 		return nil, fmt.Errorf("volumes not found")
 	}
 	return volumeConfig.HacheckSidecarVolumes, err
