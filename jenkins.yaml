@@ -5,4 +5,4 @@ type: debian
 host_type: xenial
 overrides:
   debian:
-    platforms: [trusty, xenial, bionic]
+    platforms: [bionic, focal, jammy]
