@@ -20,6 +20,7 @@ RUN wget http://godeb.s3.amazonaws.com/godeb-amd64.tar.gz && \
     dpkg -i go_${GO_VERSION}-godeb1_amd64.deb && \
     rm godeb-amd64.tar.gz godeb go_${GO_VERSION}-godeb1_amd64.deb
 
+RUN gem install --no-ri --no-rdoc -v 4.0.7 public_suffix
 RUN gem install --no-ri --no-rdoc fpm
 
 WORKDIR /work
