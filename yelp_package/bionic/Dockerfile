@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 ARG GO_VERSION
 
@@ -7,8 +7,8 @@ RUN apt-get -q update && \
         ca-certificates \
         git \
         wget \
-        ruby \ 
-        ruby-dev \ 
+        ruby \
+        ruby-dev \
         rubygems \
         build-essential \
     && apt-get -q clean
