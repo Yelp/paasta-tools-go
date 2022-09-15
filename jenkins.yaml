@@ -2,7 +2,7 @@
 # See http://y/jenkinsfile for more information
 # about customizing your Jenkins pipeline.
 type: debian
-host_type: xenial
+host_type: jammy
 overrides:
   debian:
     platforms: [bionic, focal, jammy]
