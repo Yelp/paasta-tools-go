@@ -7,7 +7,7 @@ itest-env:
 itest-cluster-start:
 	docker build -t $${K3DIMAGE} .
 	rm -f $${CIDFILE}
-	docker container run -d --init --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
+	docker container run -d --init --net=host --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'python3 port_reserve.py > port.txt && rm port_reserve.py'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d --trace cluster delete $${CLUSTER} &>/dev/null || echo -n'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d --trace cluster create $${CLUSTER} --api-port $$(cat port.txt) --wait --timeout 30s && rm port.txt'
