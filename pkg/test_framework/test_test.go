@@ -177,7 +177,8 @@ test-sleep05-bar %s %s 1.*error
 `, rnd, rnd, rnd, rnd, ns, rnd, ns)
 	if runtime.GOOS == "linux" {
 		// I am very sorry, but there does not seem to be a way to tell the GNU make to keep quiet here
-		cmp += "Makefile:.* failed\n"
+		// However, this doesn't print on Jammy and above (GNU Make 4.3+)
+		cmp += "(Makefile:.* failed\n)?"
 	}
 	cmp += fmt.Sprintf(`test-sleep05-operator-stop %s %s 1
 test-sleep05-cleanup %s %s 1

@@ -1,4 +1,4 @@
-FROM ubuntu:xenial
+FROM ubuntu:focal
 
 ARG GO_VERSION
 
@@ -7,8 +7,8 @@ RUN apt-get -q update && \
         ca-certificates \
         git \
         wget \
-        ruby \ 
-        ruby-dev \ 
+        ruby \
+        ruby-dev \
         rubygems \
         build-essential \
     && apt-get -q clean
@@ -20,6 +20,6 @@ RUN wget http://godeb.s3.amazonaws.com/godeb-amd64.tar.gz && \
     dpkg -i go_${GO_VERSION}-godeb1_amd64.deb && \
     rm godeb-amd64.tar.gz godeb go_${GO_VERSION}-godeb1_amd64.deb
 
-RUN gem install --no-ri --no-rdoc fpm
+RUN gem install fpm
 
 WORKDIR /work
