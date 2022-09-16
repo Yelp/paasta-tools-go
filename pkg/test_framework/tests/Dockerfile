@@ -1,7 +1,7 @@
 FROM python:3.7-alpine
 
-ENV VER_K3D=v1.6.0
-ENV VER_PORT=v1.1.1
+ENV VER_K3D=v5.4.6
+ENV VER_PORT=v1.1.4
 
 RUN apk --no-cache add ca-certificates bash curl
 
