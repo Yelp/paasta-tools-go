@@ -482,3 +482,53 @@ func TestImpliedEqualCPULimit(t *testing.T) {
 		},
 	)
 }
+
+
+func TestCmp_QuantityComparingToIsEqual_ReturnZero(t *testing.T) {
+	kubeResourceQuantity := KubeResourceQuantity("10")
+	kubeResourceQuantityToCompare := KubeResourceQuantity("10")
+
+	result, err := kubeResourceQuantity.Cmp(kubeResourceQuantityToCompare)
+	if err != nil {
+		t.Errorf("Unexpected error, %s", err.Error())
+	}
+
+	expected := 0
+
+	if !assert.Equal(t, expected, result) {
+		t.Fatalf("Not equal: Expected: %d, Actual: %d", expected, result)
+	}
+}
+
+func TestCmp_QuantityComparingToIsGreater_ReturnNegativeOne(t *testing.T) {
+	kubeResourceQuantity := KubeResourceQuantity("10")
+	kubeResourceQuantityToCompare := KubeResourceQuantity("20")
+
+	result, err := kubeResourceQuantity.Cmp(kubeResourceQuantityToCompare)
+	if err != nil {
+		t.Errorf("Unexpected error, %s", err.Error())
+	}
+
+	expected := -1
+
+	if !assert.Equal(t, expected, result) {
+		t.Fatalf("Not equal: Expected: %d, Actual: %d", expected, result)
+	}
+}
+
+func TestCmp_QuantityComparingToIsGreater_ReturnOne(t *testing.T) {
+	kubeResourceQuantity := KubeResourceQuantity("10")
+	kubeResourceQuantityToCompare := KubeResourceQuantity("5")
+
+	result, err := kubeResourceQuantity.Cmp(kubeResourceQuantityToCompare)
+	if err != nil {
+		t.Errorf("Unexpected error, %s", err.Error())
+	}
+
+	expected := 1
+
+	if !assert.Equal(t, expected, result) {
+		t.Fatalf("Not equal: Expected: %d, Actual: %d", expected, result)
+	}
+}
+
