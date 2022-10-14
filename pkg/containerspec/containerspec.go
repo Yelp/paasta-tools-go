@@ -46,6 +46,23 @@ func (n KubeResourceQuantity) copy() KubeResourceQuantity {
 	return KubeResourceQuantity(string(n))
 }
 
+func (n KubeResourceQuantity) Cmp(quantityToCompare KubeResourceQuantity) (int, error) {
+	quantityResource, err := resource.ParseQuantity(string(n))
+	if err != nil {
+		return 0, fmt.Errorf("error while parsing KubeResourceQuantity quantity '%s': %s", string(n), err)
+	}
+
+	quantityToCompareResource, err := resource.ParseQuantity(string(quantityToCompare))
+	if err != nil {
+		return 0, fmt.Errorf("error while parsing KubeResourceQuantity quantity '%s': %s", string(quantityToCompare), err)
+	}
+
+	// Cmp returns 0 if the quantityResource is equal to quantityToCompareResource
+	// -1 if the quantityResource is less than quantityToCompareResource
+	// 1 if the quantityResource is greater than quantityToCompareResource.
+	return quantityResource.Cmp(quantityToCompareResource), nil
+}
+
 // PaastaContainerSpec : Spec for any paasta container with basic fields and utilities
 type PaastaContainerSpec struct {
 	CPU         *KubeResourceQuantity `json:"cpus"`
