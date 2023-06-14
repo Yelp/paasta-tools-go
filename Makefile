@@ -6,7 +6,7 @@ GID:=$(shell id -g)
 GO_VERSION=1.12.7
 VERSION=0.0.17
 
-GOBUILD=GO111MODULE=on go build -ldflags="\
+GOBUILD=CGO_ENABLED=0 GO111MODULE=on go build -ldflags="\
 	-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION) \
 	-X github.com/Yelp/paasta-tools-go/pkg/version.PaastaVersion=$(PAASTA_VERSION)"
 
