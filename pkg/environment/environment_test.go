@@ -35,6 +35,14 @@ func TestGetDefaultPaastaKubernetesEnvironment(test *testing.T) {
 			},
 		},
 		{
+			Name: "PAASTA_INSTANCE_TYPE",
+			ValueFrom: &corev1.EnvVarSource{
+				FieldRef: &corev1.ObjectFieldSelector{
+					FieldPath: "metadata.labels['paasta.yelp.com/service']",
+				},
+			},
+		},
+		{
 			Name: "PAASTA_CLUSTER",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
