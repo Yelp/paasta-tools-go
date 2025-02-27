@@ -141,13 +141,13 @@ func LoadUnstructured(r io.Reader) (*unstructured.Unstructured, error) {
 // This function supports both strong-typed object and Unstructured object. For example to load a deployment file
 // the following can be used:
 //
-//    dep := appsv1.Deployment{}
-//    if err := framework.LoadInto(bufio.NewReader(file), &dep); err != nil { . . .
+//	dep := appsv1.Deployment{}
+//	if err := framework.LoadInto(bufio.NewReader(file), &dep); err != nil { . . .
 //
 // The benefits of using strong-typed objects (rather than unstructured.Unstructured) are:
-//   * K8s will validate the input file while loading it
-//   * Individual elements of the service definition will be easier to work with
-//   * Function framework.WaitFor() provides special handling waiting on pods for types which can own them
+//   - K8s will validate the input file while loading it
+//   - Individual elements of the service definition will be easier to work with
+//   - Function framework.WaitFor() provides special handling waiting on pods for types which can own them
 //
 // Both JSON and YAML formats are supported.
 func LoadInto(r io.Reader, into interface{}) error {

@@ -51,7 +51,7 @@ func TestStartSlowNoCleanup(t *testing.T) {
 		DefaultEnvAlways(),
 		DefaultPrefix("test-sleep05"),
 		DefaultNoCleanup(),
-		DefaultOperatorDelay(200 * time.Millisecond),
+		DefaultOperatorDelay(200*time.Millisecond),
 	)
 	sinks, cout, cerr, operator := newSinks()
 	kube := startHarness(options, sinks, nil)
@@ -95,7 +95,7 @@ func TestStartSlowWithCleanup(t *testing.T) {
 	options := *newOptions(
 		DefaultEnvAlways(),
 		DefaultPrefix("test-sleep05"),
-		DefaultOperatorDelay(200 * time.Millisecond),
+		DefaultOperatorDelay(200*time.Millisecond),
 	)
 	sinks, cout, cerr, operator := newSinks()
 	kube := startHarness(options, sinks, nil)
@@ -140,7 +140,7 @@ func TestRunArbitraryTarget(t *testing.T) {
 	options := *newOptions(
 		DefaultEnvAlways(),
 		DefaultPrefix("test-sleep05"),
-		DefaultOperatorDelay(200 * time.Millisecond),
+		DefaultOperatorDelay(200*time.Millisecond),
 	)
 	sinks, cout, _, _ := newSinks()
 	kube := startHarness(options, sinks, nil)
@@ -194,7 +194,7 @@ func TestRunArbitraryTargetWithEnv(t *testing.T) {
 	options := *newOptions(
 		DefaultEnvAlways(),
 		DefaultPrefix("test-sleep05"),
-		DefaultOperatorDelay(200 * time.Millisecond),
+		DefaultOperatorDelay(200*time.Millisecond),
 	)
 	sinks, cout, _, _ := newSinks()
 	kube := startHarness(options, sinks, nil)

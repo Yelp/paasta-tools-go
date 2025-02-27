@@ -1,3 +1,4 @@
+//go:build yelp
 // +build yelp
 
 package monk

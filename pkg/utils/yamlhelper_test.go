@@ -10,7 +10,7 @@ import (
 
 func TestGetYamlDiffForObjects(t *testing.T) {
 	labels1 := map[string]string{
-		"yelp.com/rick": "andmortyadventures1",
+		"yelp.com/rick":                 "andmortyadventures1",
 		"yelp.com/operator_config_hash": "somerandomhash1",
 	}
 	replicas1 := int32(2)
@@ -37,7 +37,7 @@ func TestGetYamlDiffForObjects(t *testing.T) {
 	}
 
 	labels2 := map[string]string{
-		"yelp.com/rick": "andmortyadventures2",
+		"yelp.com/rick":                 "andmortyadventures2",
 		"yelp.com/operator_config_hash": "somerandomhash2",
 	}
 	replicas2 := int32(2)
@@ -56,7 +56,7 @@ func TestGetYamlDiffForObjects(t *testing.T) {
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{corev1.PersistentVolumeClaim{}},
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
-					Volumes:    []corev1.Volume{
+					Volumes: []corev1.Volume{
 						{
 							Name:         "volume1",
 							VolumeSource: corev1.VolumeSource{},

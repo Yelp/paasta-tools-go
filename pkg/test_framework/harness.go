@@ -37,13 +37,13 @@ type Harness struct {
 	Options Options
 	// Sinks provided to Start function. If "nil" was given, then a default
 	// empty instance of Sinks will be stored here.
-	Sinks   Sinks
+	Sinks Sinks
 	// Scheme provided to Start function. This will be "nil" if Start function
 	// received a "nil" parameter (i.e there is no default Scheme)
-	Scheme  *runtime.Scheme
+	Scheme *runtime.Scheme
 	// Kubernetes client initialised and authenticated for operations on the
 	// test cluster, created inside Start function.
-	Client  client.Client
+	Client client.Client
 }
 
 // Close function will stop the test cluster
@@ -58,7 +58,7 @@ func (h *Harness) Close() error {
 //
 // Users are expected to use the return value from this function as a result code of the Go tests, e.g.:
 //
-//    os.Exit(framework.Kube.Run(m))
+//	os.Exit(framework.Kube.Run(m))
 //
 // It should be called after Start function, which sets the options and starts the test cluster.
 func (h *Harness) Run(m *testing.M) int {
@@ -69,8 +69,8 @@ func (h *Harness) Run(m *testing.M) int {
 // NewTest will prepare new test case
 //
 // Each test case needs a small number of extra data:
-//   * test namespace, to be used in the K8s cluster by this test case
-//   * sequential test number, to aid parallel test execution
+//   - test namespace, to be used in the K8s cluster by this test case
+//   - sequential test number, to aid parallel test execution
 //
 // This function takes care to prepare both of these. Note, the user should also the call test.Setup
 // function to actually create namespace object in the K8s cluster and populate the environment variables
@@ -118,17 +118,17 @@ type Options struct {
 	harness.Options
 	// Makefile is the name of the makefile used for "glue" targets required by the test framework.
 	// The default name is "Makefile"
-	Makefile      string
+	Makefile string
 	// MakeDir is the path to the directory containing the Makefile. It should be set relative to main_test.go
 	// file by the DefaultMakeDir functional option; this path will be converted inside Parse to absolute path
 	// and then stored here. Note, the conversion to absolute path is idempotent and also performed inside
 	// Start, which allows the user to pass a relative path to Start here (e.g. if they are not using Parse)
-	MakeDir       string
+	MakeDir string
 	// Prefix is the prefix of the make targets used for "glue" targets executed by the test framework.
 	// It defaults to "test". Parse function will "sanitize" this name if it does not end with either of
 	// underscore or minus sign by appending a minus sign. Such sanitized name will be stored here.
 	// Note, this operation is idempotent and also performed inside Start.
-	Prefix        string
+	Prefix string
 	// OperatorDelay is the delay for starting operator during tests, during which the test framework
 	// will wait for the operator to fail or exit, so it can fail the test case immediately. If the
 	// operator continues to run beyond this interval, it is considered to have started successfully and
@@ -138,15 +138,15 @@ type Options struct {
 	// environment variables which collide with the environment variables already set before the tests
 	// have started. If this flag is set then the variables from the glue target will take priority.
 	// It is recommended that tests use the DefaultEnvAlways functional option to enable this functionality.
-	EnvAlways     bool
+	EnvAlways bool
 }
 
 // Sinks can be used to capture the "console" output from the spawned sub-processes (e.g. glue targets or
 // custom targets) for the purpose of testing. Capturing this output may be useful in tests.
 type Sinks struct {
-	Stdout    []io.Writer
-	Stderr    []io.Writer
-	Operator  []io.Writer
+	Stdout   []io.Writer
+	Stderr   []io.Writer
+	Operator []io.Writer
 }
 
 // Kube is the global Harness object, created inside Start function.
@@ -177,22 +177,22 @@ type ParseOptions struct {
 	CmdLine       *flag.FlagSet
 }
 
-type ParseOptionFn func (a* ParseOptions)
+type ParseOptionFn func(a *ParseOptions)
 
 // DefaultMakeDir should be called by the test code to set the relative path of the "glue" makefile
 //
 // For example, assuming that the "glue" targets are defined inside the Makefile residing in the project
 // root directory and acceptance tests are in the "acceptance" directory, as demonstrated below:
 //
-//   | Makefile
-//   + acceptance
-//     | main_test.go
+//	| Makefile
+//	+ acceptance
+//	  | main_test.go
 //
 // then the TestMain function defined inside main_test.go should pass DefaultMakeDir("..") to Parse function.
 // This will ensure that framework will be able to find the Makefile in root project directory to execute the
 // "glue" targets. The user can override this value using command line option -k8s.makedir
 func DefaultMakeDir(makedir string) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.MakeDir = makedir
 	}
 }
@@ -203,7 +203,7 @@ func DefaultMakeDir(makedir string) ParseOptionFn {
 // code can set a different default using this function. The user can override this option using command line
 // option -k8s.makefile
 func DefaultMakefile(makefile string) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.Makefile = makefile
 	}
 }
@@ -213,7 +213,7 @@ func DefaultMakefile(makefile string) ParseOptionFn {
 // If not set inside the test code, hardcoded subdirectory "manifests" will be used. The user can override this
 // value using command line option -k8s.manifests
 func DefaultManifests(manifests string) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.Manifests = manifests
 	}
 }
@@ -229,7 +229,7 @@ func DefaultManifests(manifests string) ParseOptionFn {
 // the test framework will invoke "env" glue target, which together with the default prefix makes "test-env"
 // target in the Makefile.
 func DefaultPrefix(prefix string) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.Prefix = prefix
 	}
 }
@@ -242,7 +242,7 @@ func DefaultPrefix(prefix string) ParseOptionFn {
 // utilization by the test cluster and in turn to transient test failures, so it is recommended that this
 // function is not used by the test code.
 func DefaultNoCleanup() ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.NoCleanup = true
 	}
 }
@@ -254,7 +254,7 @@ func DefaultNoCleanup() ParseOptionFn {
 // StartOperator function; it also means that starting the operator will take longer. This can be overridden
 // by the user with -k8s.op-delay command line option.
 func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.OperatorDelay = opdelay
 	}
 }
@@ -269,7 +269,7 @@ func DefaultOperatorDelay(opdelay time.Duration) ParseOptionFn {
 // ignore inherited environment variables when parsing "env" glue target output. It is recommended that test code
 // should use DefaultEnvAlways(). This can be overridden by the user with command line option -k8s.env-always
 func DefaultEnvAlways() ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.EnvAlways = true
 	}
 }
@@ -280,7 +280,7 @@ func DefaultEnvAlways() ParseOptionFn {
 // still want to call Parse function (rather than prepare Options object explicitly in code). This function
 // is mainly used for testing of the Parse function.
 func OverrideOsArgs(osargs []string) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.OsArgs = osargs
 	}
 }
@@ -289,7 +289,7 @@ func OverrideOsArgs(osargs []string) ParseOptionFn {
 //
 // Normally tests should not use this function. It is only meant for testing of the Parse function.
 func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
-	return func(a* ParseOptions) {
+	return func(a *ParseOptions) {
 		a.CmdLine = cmdline
 	}
 }
@@ -298,11 +298,11 @@ func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
 //
 // Test code may set the default values of the test options using Default... functional options above, e.g.:
 //
-//  func TestMain(m *testing.M) {
-//    options := framework.Parse(
-//      framework.DefaultMakeDir(".."),
-//		framework.DefaultEnvAlways(),
-//    )
+//	 func TestMain(m *testing.M) {
+//	   options := framework.Parse(
+//	     framework.DefaultMakeDir(".."),
+//			framework.DefaultEnvAlways(),
+//	   )
 //
 // In particular, DefaultMakeDir should be used to point to the Makefile directory where "glue" targets are defined.
 //
@@ -311,11 +311,11 @@ func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
 // absolute path inside the Start function.
 //
 // We are making use of Functional Options pattern here, which works as follows:
-//   * Parse function takes a variadic slice of functions matching ParseOptionFn signature
-//   * each of these functions is responsible for adjusting a different field of ParseOptions structure
-//   * the Default... functional options documented directly above can be used to create the required functions
-//   * Parse will execute all these functions, hence adjusting default values of the command line parameters
-//   * when command line parameters are parsed inside Parse, such adjusted default values will be applied
+//   - Parse function takes a variadic slice of functions matching ParseOptionFn signature
+//   - each of these functions is responsible for adjusting a different field of ParseOptions structure
+//   - the Default... functional options documented directly above can be used to create the required functions
+//   - Parse will execute all these functions, hence adjusting default values of the command line parameters
+//   - when command line parameters are parsed inside Parse, such adjusted default values will be applied
 func Parse(opts ...ParseOptionFn) *Options {
 	args := ParseOptions{
 		MakeDir:       "",
@@ -366,16 +366,16 @@ func Parse(opts ...ParseOptionFn) *Options {
 // Start function will prepare and start the test cluster and create the K8s client for operating on it
 //
 // This is arguably the key function of the test framework, since it performs most work:
-//   * validation of all "glue" targets
-//   * shutting the previously running cluster (if there was one and "no cleanup" is not set)
-//   * starting up a test Kubernetes cluster
-//   * creating a controller-runtime/client.Client object for manipulating the test cluster
-//   * this client object will be made available for use in test code as framework.Kube.Client
+//   - validation of all "glue" targets
+//   - shutting the previously running cluster (if there was one and "no cleanup" is not set)
+//   - starting up a test Kubernetes cluster
+//   - creating a controller-runtime/client.Client object for manipulating the test cluster
+//   - this client object will be made available for use in test code as framework.Kube.Client
 //
 // Aside from the regular options, test code may also set:
-//   * Sinks, to programmatically receive and handle the output of "glue" targets
-//   * runtime.Scheme for CRD used by the test controller-runtime/client.Client object
-func Start(options Options, sinks* Sinks, scheme* runtime.Scheme) {
+//   - Sinks, to programmatically receive and handle the output of "glue" targets
+//   - runtime.Scheme for CRD used by the test controller-runtime/client.Client object
+func Start(options Options, sinks *Sinks, scheme *runtime.Scheme) {
 	// NOTE: We call "sanitize" functions both here and in Parse() to avoid
 	// strong coupling, i.e. we do not make strong assumption as to the format
 	// of MakeDir and Prefix here, hence allowing the user to skip Parse()
@@ -407,7 +407,7 @@ func sanitizePrefix(prefix string) string {
 		// Regexp help is here: https://golang.org/pkg/regexp/syntax/
 		generic, _ := regexp.Compile(`^[\w-]+$`)
 		trailing, _ := regexp.Compile(`^[\w-]*[-_]$`)
-		if !generic.Match([]byte(prefix)){
+		if !generic.Match([]byte(prefix)) {
 			log.Panicf("Invalid k8s.prefix '%s'", prefix)
 		} else if !trailing.Match([]byte(prefix)) {
 			prefix += "-"
@@ -424,7 +424,7 @@ func newClientConfig(kubeconfig string) (*rest.Config, error) {
 	).ClientConfig()
 }
 
-func newClient(scheme* runtime.Scheme) client.Client {
+func newClient(scheme *runtime.Scheme) client.Client {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if len(kubeconfig) == 0 {
 		log.Panicf("KUBECONFIG is empty or not set")
@@ -446,18 +446,18 @@ func newClient(scheme* runtime.Scheme) client.Client {
 	return cclient
 }
 
-func startHarness(options Options, sinks Sinks, scheme* runtime.Scheme) *Harness {
+func startHarness(options Options, sinks Sinks, scheme *runtime.Scheme) *Harness {
 	checkMakefile(options, sinks)
 	buildEnv(options, sinks)
 	stopCluster(options, sinks)
 	startCluster(options, sinks)
 	return &Harness{
 		internalState: internalState{0},
-		Harness: *harness.New(options.Options),
-		Options: options,
-		Sinks:   sinks,
-		Scheme:  scheme,
-		Client:  nil,
+		Harness:       *harness.New(options.Options),
+		Options:       options,
+		Sinks:         sinks,
+		Scheme:        scheme,
+		Client:        nil,
 	}
 }
 

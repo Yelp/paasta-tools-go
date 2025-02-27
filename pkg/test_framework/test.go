@@ -25,8 +25,8 @@ type Test struct {
 //
 // This function should be called at the start of every test case and followed by "defer test.Close()", e.g:
 //
-//    test := framework.Kube.NewTest(t).Setup()
-//    defer test.Close()
+//	test := framework.Kube.NewTest(t).Setup()
+//	defer test.Close()
 func (t *Test) Setup() *Test {
 	// this bit of defensive programming is to aid unit testing
 	if t.harness.Harness.KubeClient() != nil {
@@ -73,7 +73,7 @@ func (t *Test) StopOperator() {
 // the invoked target, using the map parameters. These parameters are applied from left to right and never override
 // variables set earlier. In particular, environment variables set inside test.Setup() cannot be overridden.
 // RunTarget function will return an error if the target cannot be found or if it failed execution for any reason.
-func (t *Test) RunTarget(name string, env ... map[string]string) error {
+func (t *Test) RunTarget(name string, env ...map[string]string) error {
 	envs := t.envs
 	for _, envsInternal := range env {
 		for key, val := range envsInternal {
@@ -100,7 +100,7 @@ func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 // Ideally this function should be "deferred" right after test.Setup, as demonstrated above.
 func (t *Test) Close() {
 	// If panicking, let Test.Close() do its thing only and keep the operator running
-	defer func () {
+	defer func() {
 		t.Test.Close()
 	}()
 	if r := recover(); r != nil {
@@ -140,7 +140,7 @@ func (c *chanError) close() {
 }
 
 type asynchronousHandler struct {
-	delay time.Duration
+	delay  time.Duration
 	result error
 }
 
@@ -153,7 +153,7 @@ type asynchronousHandler struct {
 // when operatorStartDelay has elapsed.
 // If we have received anything on the channel (before it closed), it means that
 // the program completed; otherwise we consider it running.
-func(h* asynchronousHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
+func (h *asynchronousHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
 	channel := newChanError()
 	go func() {
 		wg.Wait()
@@ -192,7 +192,7 @@ func startOperator(options Options, sinks Sinks, envs map[string]string) error {
 	log.Printf("Starting %v ...", args)
 	// let's use sinks.Operator as Stdout for operator output
 	handler := asynchronousHandler{options.OperatorDelay, nil}
-	if err := start(&handler, sinks.Operator,  nil, args, envs); err != nil {
+	if err := start(&handler, sinks.Operator, nil, args, envs); err != nil {
 		return err
 	}
 	return handler.result

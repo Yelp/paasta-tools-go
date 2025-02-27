@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"testing"
 
-    "github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 )
@@ -484,7 +484,6 @@ func TestImpliedEqualCPULimit(t *testing.T) {
 	)
 }
 
-
 func TestCmp_QuantityComparingToIsEqual_ReturnZero(t *testing.T) {
 	kubeResourceQuantity := KubeResourceQuantity("10")
 	kubeResourceQuantityToCompare := KubeResourceQuantity("10")
@@ -532,4 +531,3 @@ func TestCmp_QuantityComparingToIsGreater_ReturnOne(t *testing.T) {
 		t.Fatalf("Not equal: Expected: %d, Actual: %d", expected, result)
 	}
 }
-
