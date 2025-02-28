@@ -1,18 +1,20 @@
 // Package deployments provides functions for decoding V2 paasta deployments
 // of the form:
 //
+//	{
 //	  "v2": {
-//	   "deployments": {
-//			"everything": {
-//			  "docker_image": "services-fluffy:paasta-abcdfff",
-//			  "git_sha": "abcdfff"
-//			},
-//			"stagef": {
-//			  "docker_image": "services-fluffy:paasta-abcdfff",
-//			  "git_sha": "abcdfff"
-//			}
-//		  },
-//	 }
+//	    "deployments": {
+//	      "everything": {
+//	        "docker_image": "services-fluffy:paasta-abcdfff",
+//	        "git_sha": "abcdfff"
+//	      },
+//	      "stagef": {
+//	        "docker_image": "services-fluffy:paasta-abcdfff",
+//	        "git_sha": "abcdfff"
+//	      }
+//	    }
+//	  }
+//	}
 package deployments
 
 import (

@@ -38,8 +38,7 @@ import (
 // the value.
 //
 // TODO: since `Store` is meant to be a long-lived object we need to keep track
-//
-//	of updated configs and a possibility to manually reset the cache.
+// of updated configs and a possibility to manually reset the cache.
 type Store struct {
 	Data  *sync.Map
 	Dir   string

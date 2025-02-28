@@ -298,11 +298,11 @@ func OverrideCmdLine(cmdline *flag.FlagSet) ParseOptionFn {
 //
 // Test code may set the default values of the test options using Default... functional options above, e.g.:
 //
-//	 func TestMain(m *testing.M) {
-//	   options := framework.Parse(
-//	     framework.DefaultMakeDir(".."),
+//	func TestMain(m *testing.M) {
+//		options := framework.Parse(
+//			framework.DefaultMakeDir(".."),
 //			framework.DefaultEnvAlways(),
-//	   )
+//		)
 //
 // In particular, DefaultMakeDir should be used to point to the Makefile directory where "glue" targets are defined.
 //
