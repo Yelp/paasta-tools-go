@@ -11,7 +11,7 @@ import (
 
 func TestGetHashObjectOfKubernetes(t *testing.T) {
 	labels := map[string]string{
-		"yelp.com/rick": "andmortyadventures",
+		"yelp.com/rick":                 "andmortyadventures",
 		"yelp.com/operator_config_hash": "somerandomhash",
 	}
 	labelsWithoutHash := map[string]string{
@@ -40,13 +40,13 @@ func TestGetHashObjectOfKubernetes(t *testing.T) {
 		},
 	}
 	expectedHashObject := map[string]interface{}{
-		"kind": someStatefulSet.TypeMeta.Kind,
+		"kind":       someStatefulSet.TypeMeta.Kind,
 		"apiVersion": someStatefulSet.TypeMeta.APIVersion,
-		"spec": someStatefulSet.Spec,
+		"spec":       someStatefulSet.Spec,
 		"metadata": map[string]interface{}{
-			"name": someStatefulSet.ObjectMeta.Name,
+			"name":      someStatefulSet.ObjectMeta.Name,
 			"namespace": someStatefulSet.ObjectMeta.Namespace,
-			"labels": labelsWithoutHash,
+			"labels":    labelsWithoutHash,
 		},
 	}
 	expectedOutString, err := json.Marshal(expectedHashObject)

@@ -22,10 +22,10 @@ import (
 // `Store` object will mimic config loading from original paasta-tools, which
 // works as following for `store.Get("foo")` call:
 //
-// 1. look on disk for file `foo.json` or `foo.yaml`
-// 2. if file exists, load it and fetch `foo` key from top-level dictionary
-// 3. if file is missing, load all `.json` or `.yaml` files and merge them
-//    into single dictionary and look for `foo` key in there
+//  1. look on disk for file `foo.json` or `foo.yaml`
+//  2. if file exists, load it and fetch `foo` key from top-level dictionary
+//  3. if file is missing, load all `.json` or `.yaml` files and merge them
+//     into single dictionary and look for `foo` key in there
 //
 // To avoid eagerly loading all existing configuration files, `Store` object
 // accepts optional `hints` dictionary, with mapping from keys to file paths,
@@ -38,7 +38,7 @@ import (
 // the value.
 //
 // TODO: since `Store` is meant to be a long-lived object we need to keep track
-//       of updated configs and a possibility to manually reset the cache.
+// of updated configs and a possibility to manually reset the cache.
 type Store struct {
 	Data  *sync.Map
 	Dir   string

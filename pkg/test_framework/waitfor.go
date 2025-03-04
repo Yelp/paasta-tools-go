@@ -1,19 +1,19 @@
 package framework
 
 import (
-        "log"
-        "time"
+	"log"
+	"time"
 
-        appsv1 "k8s.io/api/apps/v1"
-        batchv1 "k8s.io/api/batch/v1"
-        corev1 "k8s.io/api/core/v1"
-        rbacv1 "k8s.io/api/rbac/v1"
-        "k8s.io/apimachinery/pkg/api/errors"
-        "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-        "k8s.io/apimachinery/pkg/util/wait"
+	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/util/wait"
 )
 
-type WaitForFn func()(interface{}, error)
+type WaitForFn func() (interface{}, error)
 
 // WaitFor waits until "from" function returns a given number of instances
 //

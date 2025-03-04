@@ -68,7 +68,7 @@ func envAppend(envs map[string]string) []string {
 	}
 	// ... then append new entries
 	for key, val := range envs {
-		env = append(env, key + "=" + val)
+		env = append(env, key+"="+val)
 	}
 	return env
 }
@@ -141,7 +141,8 @@ func start(handler Handler, outSinks []io.Writer, errSinks []io.Writer, args []s
 type blockingHandler struct {
 	result error
 }
-func(h *blockingHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
+
+func (h *blockingHandler) Handle(cmd *exec.Cmd, wg *sync.WaitGroup) {
 	wg.Wait()
 	h.result = cmd.Wait()
 }

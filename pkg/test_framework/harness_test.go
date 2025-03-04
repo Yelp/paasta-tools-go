@@ -69,9 +69,9 @@ func TestSanitizePrefix(t *testing.T) {
 	assert.Equal(t, "012-abc-", r7)
 	assert.Equal(t, r7, sanitizePrefix(r7))
 
-	assert.Panics(t, func() {sanitizePrefix(" ")} )
-	assert.Panics(t, func() {sanitizePrefix("$")} )
-	assert.Panics(t, func() {sanitizePrefix(" abc ")} )
+	assert.Panics(t, func() { sanitizePrefix(" ") })
+	assert.Panics(t, func() { sanitizePrefix("$") })
+	assert.Panics(t, func() { sanitizePrefix(" abc ") })
 }
 
 // Just run makefile with no sinks to capture the output
@@ -104,7 +104,7 @@ func TestParse(t *testing.T) {
 	assert.Equal(t, "Makefile", defs.Makefile)
 	assert.Equal(t, sanitizeMakeDir(""), defs.MakeDir)
 	assert.Equal(t, "test-", defs.Prefix)
-	assert.Equal(t, 2 * time.Second, defs.OperatorDelay)
+	assert.Equal(t, 2*time.Second, defs.OperatorDelay)
 	assert.Equal(t, false, defs.EnvAlways)
 
 	// Test handling of unknown options
@@ -112,7 +112,7 @@ func TestParse(t *testing.T) {
 		_ = Parse(
 			OverrideOsArgs([]string{"-no-such-option"}),
 			OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
-			)
+		)
 	})
 
 	// Test individual options (except verbose)
@@ -131,12 +131,12 @@ func TestParse(t *testing.T) {
 		DefaultMakefile("Bar"),
 		DefaultManifests("baz"),
 		DefaultPrefix("fizz"),
-		DefaultOperatorDelay(5 * time.Second),
+		DefaultOperatorDelay(5*time.Second),
 		DefaultNoCleanup(),
 		DefaultEnvAlways(),
 		OverrideOsArgs([]string{}),
 		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
-		)
+	)
 
 	// Options can be set with command line
 	assert.Equal(t, r1, o1)
@@ -151,7 +151,7 @@ func TestParse(t *testing.T) {
 			"-k8s.env-always=true",
 		}),
 		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
-		)
+	)
 	assert.Equal(t, r1, o2)
 
 	// Options can be set with Default... functions and overridden from command line
@@ -160,7 +160,7 @@ func TestParse(t *testing.T) {
 		DefaultMakeDir("bad"),
 		DefaultManifests("bad"),
 		DefaultPrefix("bad"),
-		DefaultOperatorDelay(5 * time.Second),
+		DefaultOperatorDelay(5*time.Second),
 		DefaultNoCleanup(),
 		DefaultEnvAlways(),
 		OverrideOsArgs([]string{
@@ -172,7 +172,7 @@ func TestParse(t *testing.T) {
 			"-k8s.env-always=false",
 		}),
 		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
-		)
+	)
 	r2 := defs
 	r2.Prefix = "tests-"
 	r2.MakeDir = sanitizeMakeDir("tests")
@@ -184,7 +184,7 @@ func TestParse(t *testing.T) {
 	o4 := *Parse(
 		OverrideOsArgs([]string{"-k8s.no-cleanup", "-k8s.prefix", "buzz", "-something", "true"}),
 		OverrideCmdLine(oflags),
-		)
+	)
 	r3 := defs
 	r3.NoCleanup = true
 	r3.Prefix = "buzz-"
@@ -199,7 +199,7 @@ func newOptions(opts ...ParseOptionFn) *Options {
 		OverrideCmdLine(flag.NewFlagSet("tests", flag.PanicOnError)),
 		DefaultMakeDir("tests"),
 		DefaultPrefix("tests"),
-	}, opts ...)
+	}, opts...)
 	return Parse(opts...)
 }
 
@@ -208,8 +208,8 @@ func newSinks() (Sinks, *bytes.Buffer, *bytes.Buffer, *bytes.Buffer) {
 	cerr := bytes.Buffer{}
 	operator := bytes.Buffer{}
 	return Sinks{
-		Stdout: []io.Writer{&cout},
-		Stderr: []io.Writer{&cerr},
+		Stdout:   []io.Writer{&cout},
+		Stderr:   []io.Writer{&cerr},
 		Operator: []io.Writer{&operator},
 	}, &cout, &cerr, &operator
 }

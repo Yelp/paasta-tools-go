@@ -24,7 +24,7 @@ func TestWaitFor_Basic(t *testing.T) {
 	err := WaitFor(
 		1,
 		time.Minute,
-		func()(interface{}, error) {
+		func() (interface{}, error) {
 			res := &corev1.ServiceList{}
 			err := Kube.Client.List(
 				context.TODO(),

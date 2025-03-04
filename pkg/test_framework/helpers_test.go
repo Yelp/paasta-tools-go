@@ -107,24 +107,24 @@ spec:
 
 func TestLoadUnstructured(t *testing.T) {
 	reader := bytes.NewReader([]byte(fizzbuzzYaml))
-    obj1, err := LoadUnstructured(reader)
-    assert.NoError(t, err)
-    assert.Equal(t, "buzz", obj1.GetKind())
-    assert.Equal(t, "fizz/v1", obj1.GetAPIVersion())
+	obj1, err := LoadUnstructured(reader)
+	assert.NoError(t, err)
+	assert.Equal(t, "buzz", obj1.GetKind())
+	assert.Equal(t, "fizz/v1", obj1.GetAPIVersion())
 	assert.Equal(t, "fizzbuzz", obj1.GetName())
 	assert.Equal(t, "helloworld", obj1.GetNamespace())
-    assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]string{
 		"buzz.hello": "world",
-    }, obj1.GetLabels())
+	}, obj1.GetLabels())
 	assert.Equal(t, map[string]string{
 		"fizz.foo": "0",
 		"fizz.bar": "false",
 	}, obj1.GetAnnotations())
-    json1, _ := obj1.MarshalJSON()
+	json1, _ := obj1.MarshalJSON()
 	assert.Equal(t, fizzbuzzMini, string(json1))
 
 	reader.Reset([]byte(fizzbuzzJson))
-    obj2, err := LoadUnstructured(reader)
+	obj2, err := LoadUnstructured(reader)
 	assert.NoError(t, err)
 	json2, _ := obj2.MarshalJSON()
 	assert.Equal(t, fizzbuzzMini, string(json2))
@@ -219,7 +219,7 @@ func TestReadWriteDeleteValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"buzz.hello": "world",
-		"dummy": "bar",
+		"dummy":      "bar",
 	}, labels)
 
 	// Delete dummy value now
@@ -242,7 +242,7 @@ func TestReadWriteDeleteValue(t *testing.T) {
 	assert.NotNil(t, err)
 
 	// Write whole section
-	labels = map[string]interface{} {
+	labels = map[string]interface{}{
 		"fizz.hello": "there",
 	}
 	err = WriteValue(service, labels, "metadata", "labels")
@@ -259,9 +259,9 @@ func TestReadWriteDeleteValue(t *testing.T) {
 	ports, err := ReadValue(service, "spec", "ports")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
-		"name": "rest",
-		"port": int64(8080),
-		"protocol": "TCP",
+		"name":       "rest",
+		"port":       int64(8080),
+		"protocol":   "TCP",
 		"targetPort": int64(8080),
 	}, ports.([]interface{})[0])
 
@@ -274,9 +274,9 @@ func TestReadWriteDeleteValue(t *testing.T) {
 	ports, err = ReadValue(service, "spec", "ports")
 	assert.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
-		"name": "blob",
-		"port": int64(8080),
-		"protocol": "TCP",
+		"name":       "blob",
+		"port":       int64(8080),
+		"protocol":   "TCP",
 		"targetPort": int64(8080),
 	}, ports.([]interface{})[0])
 }
