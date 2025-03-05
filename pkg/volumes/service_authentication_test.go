@@ -36,12 +36,10 @@ func TestGetServiceAuthenticationTokenVolume(t *testing.T) {
 	}
 	mockJwtAuthConfig := &sync.Map{}
 	mockJwtAuthConfig.Store(
-		jwtServiceAuthConfigName,
-		jwtServiceAuthConfig{
-			TokenSettings: jwtServiceAuthTokenSettings{
-				Audience:      "foo.yelp.com",
-				ContainerPath: "/var/secret/serviceaccount/foo",
-			},
+		jwtServiceAuthConfigKey,
+		jwtServiceAuthTokenSettings{
+			Audience:      "foo.yelp.com",
+			ContainerPath: "/var/secret/serviceaccount/foo",
 		},
 	)
 	configReader := &configstore.Store{Data: mockJwtAuthConfig}
