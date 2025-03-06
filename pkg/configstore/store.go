@@ -220,3 +220,11 @@ func (s *Store) Load(key string, dst interface{}) (bool, error) {
 	}
 	return true, mapstructure.Decode(val, dst)
 }
+
+// AddHint inserts a new hint to find keys among config files
+func (s *Store) AddHint(key string, filename string) {
+	if s.Hints == nil {
+		s.Hints = map[string]string{}
+	}
+	s.Hints[key] = filename
+}

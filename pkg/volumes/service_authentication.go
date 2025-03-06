@@ -14,6 +14,7 @@ import (
 const (
 	authenticatingServicesConfigPath    = "/nail/etc/services/authenticating.yaml"
 	jwtServiceAuthConfigName            = "jwt_service_auth"
+	jwtServiceAuthConfigKey             = "service_auth_token_settings"
 	authenticatingServicesCacheDuration = 10 * time.Minute
 	defaultTokenExpirationSeconds       = 3600
 )
@@ -23,13 +24,9 @@ type authenticatingServicesConfig struct {
 }
 
 type jwtServiceAuthTokenSettings struct {
-	Audience          string `json:"audience"`
-	ContainerPath     string `json:"container_path"`
-	ExpirationSeconds int64  `json:"expiration_seconds"`
-}
-
-type jwtServiceAuthConfig struct {
-	TokenSettings jwtServiceAuthTokenSettings `json:"service_auth_token_settings"`
+	Audience          string `json:"audience" mapstructure:"audience"`
+	ContainerPath     string `json:"container_path" mapstructure:"container_path"`
+	ExpirationSeconds int64  `json:"expiration_seconds" mapstructure:"expiration_seconds"`
 }
 
 var authenticatingServicesCache map[string]bool
@@ -106,14 +103,14 @@ func GetProjectedServiceAccountVolume(audience string, path string, expirationSe
 }
 
 func GetServiceAuthenticationTokenVolume(configStore *configstore.Store) (corev1.VolumeMount, corev1.Volume, error) {
-	var jwtServiceAuth jwtServiceAuthConfig
-	if ok, err := configStore.Load(jwtServiceAuthConfigName, &jwtServiceAuth); !ok || err != nil {
+	var tokenSettings jwtServiceAuthTokenSettings
+	configStore.AddHint(jwtServiceAuthConfigKey, jwtServiceAuthConfigName)
+	if ok, err := configStore.Load(jwtServiceAuthConfigKey, &tokenSettings); !ok || err != nil {
 		if err == nil {
 			err = fmt.Errorf("%s configuration not found", jwtServiceAuthConfigName)
 		}
 		return corev1.VolumeMount{}, corev1.Volume{}, err
 	}
-	tokenSettings := jwtServiceAuth.TokenSettings
 	if tokenSettings.Audience == "" || tokenSettings.ContainerPath == "" {
 		return corev1.VolumeMount{}, corev1.Volume{}, fmt.Errorf("Missing token settings in %s configuration", jwtServiceAuthConfigName)
 	}
