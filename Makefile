@@ -6,6 +6,11 @@ GID:=$(shell id -g)
 GO_VERSION=1.12.7
 VERSION=0.0.22
 
+export GONOSUMDB=*.yelpcorp.com
+ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
+	export GOPROXY=http://athens.paasta-norcal-devc.yelp
+endif
+
 GOBUILD=CGO_ENABLED=0 GO111MODULE=on go build -ldflags="\
 	-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION) \
 	-X github.com/Yelp/paasta-tools-go/pkg/version.PaastaVersion=$(PAASTA_VERSION)"
