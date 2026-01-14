@@ -36,7 +36,7 @@ func InitZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	var errors []string
 
 	if zipkinURL == "" {
-		errors = append(errors, fmt.Sprintf("zipkin URL empty"))
+		errors = append(errors, "zipkin URL empty")
 		initializer = "noop"
 	} else {
 		url, err := url.Parse(zipkinURL)
@@ -51,7 +51,7 @@ func InitZipkin(zipkinURL string) (reporter.Reporter, *zipkin.Tracer, error) {
 	initializerF, ok := zipkinInitializers[initializer]
 	if !ok {
 		errors = append(errors, fmt.Sprintf("zipkin initializer for %s not found", initializer))
-		initializerF, _ = zipkinInitializers["noop"]
+		initializerF = zipkinInitializers["noop"]
 	}
 	rep, tr, err := initializerF.zipkinInitialize(zipkinURL)
 	if err != nil {

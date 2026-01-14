@@ -1,0 +1,19 @@
+version: "2"
+linters:
+  disable:
+    - ineffassign
+    - errcheck
+  exclusions:
+    rules:
+      - linters:
+          - staticcheck
+        text: "SA1019:" # "io/ioutil" has been deprecated since Go 1.19: As of Go 1.16, the same functionality is now provided by package [io] or package [os], and those implementations should be preferred in new code
+      - linters:
+          - staticcheck
+        text: "ST1005:" # error strings should not be capitalized 
+      - linters:
+          - staticcheck
+        text: "SA4006:" # value is never used 
+      - linters:
+          - staticcheck
+        text: "SA5001:" # should check error returned from os.Open() before deferring reader.Close() 

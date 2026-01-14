@@ -44,8 +44,8 @@ func formatMountName(hostPath string) string {
 	var formatted string
 	formatted = strings.TrimRight(hostPath, "/")
 	formatted = strings.TrimLeft(formatted, "/")
-	formatted = strings.Replace(formatted, "/", "-", -1)
-	formatted = strings.Replace(formatted, "_", "--", -1)
+	formatted = strings.ReplaceAll(formatted, "/", "-")
+	formatted = strings.ReplaceAll(formatted, "_", "--")
 	return formatted
 }
 

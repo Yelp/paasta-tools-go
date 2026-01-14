@@ -155,7 +155,6 @@ func UpdatePodTemplateSpecForIamRole(podTemplateSpec *corev1.PodTemplateSpec, ia
 		podTemplateSpec.Spec.SecurityContext = &corev1.PodSecurityContext{}
 		podTemplateSpec.Spec.ServiceAccountName = ""
 	}
-	return
 }
 
 func getServiceAccountNameForIamRole(iamRole *string) (serviceAccountName string) {

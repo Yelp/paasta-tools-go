@@ -81,7 +81,7 @@ func (h *Harness) NewTest(t htesting.T) *Test {
 		Test:            *test,
 		operatorRunning: false,
 		harness:         h,
-		testCount:       atomic.AddUint32(&h.internalState.testCounter, 1),
+		testCount:       atomic.AddUint32(&h.testCounter, 1),
 		envs:            map[string]string{},
 	}
 }
