@@ -11,7 +11,7 @@ import (
 
 	"github.com/openzipkin/zipkin-go/model"
 	"github.com/openzipkin/zipkin-go/reporter"
-	"k8s.io/klog/klogr"
+	"k8s.io/klog/v2/klogr"
 
 	monkClient "github.yelpcorp.com/go-packages/monk/client"
 	monkProducer "github.yelpcorp.com/go-packages/monk/producer"
@@ -62,7 +62,7 @@ func NewReporter(zipkinURL string) (reporter.Reporter, error) {
 		return nil, fmt.Errorf("parsing port: %v", err)
 	}
 	factory := monkClient.NewMonkConnectionFactory(url.Hostname(), uint64(port), "paasta-go")
-	reporter.producer = monkProducer.New(factory)
+	reporter.producer = monkProducer.NewDefaultProducer(factory, nil)
 	reporter.stream = reporter.producer.LogChannel(streamName, 10, 1024)
 	return reporter, nil
 }
