@@ -8,7 +8,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0
 	github.com/stretchr/testify v1.8.4
 	github.com/subosito/gotenv v1.2.0
-	github.yelpcorp.com/go-packages/monk v0.0.0-20210923142653-46be63e1f16e
 	golang.org/x/oauth2 v0.12.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.29.15
