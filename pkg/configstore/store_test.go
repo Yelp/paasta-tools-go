@@ -30,13 +30,6 @@ func unexpectedListFiles(test *testing.T) func(string) ([]string, error) {
 	}
 }
 
-func unexpectedfileExists(test *testing.T) func(path string) (bool, error) {
-	return func(path string) (bool, error) {
-		test.Fatalf("unexpected call to fileExists(%s)", path)
-		return false, nil
-	}
-}
-
 func TestStore_loadPath(test *testing.T) {
 	key := "test key"
 	s := &Store{

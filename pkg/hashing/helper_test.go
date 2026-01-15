@@ -40,12 +40,12 @@ func TestGetHashObjectOfKubernetes(t *testing.T) {
 		},
 	}
 	expectedHashObject := map[string]interface{}{
-		"kind":       someStatefulSet.TypeMeta.Kind,
-		"apiVersion": someStatefulSet.TypeMeta.APIVersion,
+		"kind":       someStatefulSet.Kind,
+		"apiVersion": someStatefulSet.APIVersion,
 		"spec":       someStatefulSet.Spec,
 		"metadata": map[string]interface{}{
-			"name":      someStatefulSet.ObjectMeta.Name,
-			"namespace": someStatefulSet.ObjectMeta.Namespace,
+			"name":      someStatefulSet.Name,
+			"namespace": someStatefulSet.Namespace,
 			"labels":    labelsWithoutHash,
 		},
 	}

@@ -64,7 +64,7 @@ func ServiceRequiresAuthenticationToken(serviceName string) (bool, error) {
 }
 
 func formatServiceAccountVolumeName(audience string) string {
-	formatted := strings.Replace(audience, ".", "dot-", -1)
+	formatted := strings.ReplaceAll(audience, ".", "dot-")
 	formatted = formatMountName(formatted)
 	formatted = fmt.Sprintf("projected-sa--%s", formatted)
 	if len(formatted) > 63 {

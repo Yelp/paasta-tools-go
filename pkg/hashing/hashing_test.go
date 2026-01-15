@@ -80,7 +80,7 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 	assert.NotEqual(t, originalHash, changedReplicasHash)
 
 	// test hash changes if we change labels
-	someStatefulSet.ObjectMeta.Labels["yelp.com/for"] = "everandever"
+	someStatefulSet.Labels["yelp.com/for"] = "everandever"
 	var changedLabelHash string
 	changedLabelHash, err = ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
@@ -90,7 +90,7 @@ func TestGetHashForKubernetesObject(t *testing.T) {
 	assert.NotEqual(t, changedReplicasHash, changedLabelHash)
 
 	// test hash ignores yelp.com/operator_config_hash label
-	someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"] = "somehash"
+	someStatefulSet.Labels["yelp.com/operator_config_hash"] = "somehash"
 	var changedSpecialLabelHash string
 	changedSpecialLabelHash, err = ComputeHashForKubernetesObject(someStatefulSet)
 	if err != nil {
@@ -146,12 +146,12 @@ func TestSetKubernetesObjectHash(t *testing.T) {
 	}
 
 	// the new label and existing label are present in ObjectMeta
-	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"], "abc1234")
-	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/rick"], "andmortyadventures")
+	assert.Equal(t, someStatefulSet.Labels["yelp.com/operator_config_hash"], "abc1234")
+	assert.Equal(t, someStatefulSet.Labels["yelp.com/rick"], "andmortyadventures")
 
 	// the new label is *not* present on other parts of the kubernetes object
 	assert.NotEqual(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/operator_config_hash"], "abc1234")
-	assert.NotEqual(t, someStatefulSet.Spec.Template.ObjectMeta.Labels["yelp.com/operator_config_hash"], "abc1234")
+	assert.NotEqual(t, someStatefulSet.Spec.Template.Labels["yelp.com/operator_config_hash"], "abc1234")
 	// but the existing labels are
 	assert.Equal(t, someStatefulSet.Spec.Selector.MatchLabels["yelp.com/rick"], "andmortyadventures")
 
@@ -161,8 +161,8 @@ func TestSetKubernetesObjectHash(t *testing.T) {
 		t.Errorf("Failed to add label")
 	}
 	// the new hash and existing label are present in ObjectMeta
-	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/operator_config_hash"], "def5678")
-	assert.Equal(t, someStatefulSet.ObjectMeta.Labels["yelp.com/rick"], "andmortyadventures")
+	assert.Equal(t, someStatefulSet.Labels["yelp.com/operator_config_hash"], "def5678")
+	assert.Equal(t, someStatefulSet.Labels["yelp.com/rick"], "andmortyadventures")
 }
 
 func TestMultipleLevels(t *testing.T) {

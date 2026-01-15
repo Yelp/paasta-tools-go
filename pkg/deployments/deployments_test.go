@@ -13,10 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-const (
-	dockerRepo = "docker-paasta.yelpcorp.com:443"
-)
-
 func TestDefaultProviderGetDeployment(test *testing.T) {
 	paastaConfigData := &sync.Map{}
 	paastaConfigData.Store("docker_registry", "fakeregistry.yelp.com")
@@ -48,7 +44,7 @@ func TestDefaultProviderGetDeployment(test *testing.T) {
 	for dment, image := range testcases {
 		actual, _ := imageProvider.getImageForDeployGroup(dment)
 		if image != "" {
-			expected = fmt.Sprintf("%s", image)
+			expected = image
 		} else {
 			expected = ""
 		}
@@ -149,7 +145,7 @@ func TestDeploymentAnnotationsForControlGroup(test *testing.T) {
 		return
 	}
 	for k, v := range anns {
-		ev, _ := expectedAnns[k]
+		ev := expectedAnns[k]
 		if v != ev {
 			test.Errorf("Expected %s to be '%+v', got '%+v'", k, ev, v)
 			return

@@ -29,7 +29,7 @@ type Test struct {
 //	defer test.Close()
 func (t *Test) Setup() *Test {
 	// this bit of defensive programming is to aid unit testing
-	if t.harness.Harness.KubeClient() != nil {
+	if t.harness.KubeClient() != nil {
 		_ = t.Test.Setup()
 	}
 	t.envs["TEST_OPERATOR_NS"] = t.Namespace
@@ -44,7 +44,7 @@ func (t *Test) Setup() *Test {
 // framework is initialized with framework.Start function. If the operator process terminates before DefaultOperatorDelay
 // (or -k8s.op-delay) has elapsed, StartOperator function will return an error.
 func (t *Test) StartOperator() error {
-	if t.operatorRunning == true {
+	if t.operatorRunning {
 		return fmt.Errorf("operator already started")
 	}
 	err := startOperator(t.harness.Options, t.harness.Sinks, t.envs)
@@ -92,7 +92,7 @@ func (t *Test) RunTarget(name string, env ...map[string]string) error {
 // Note: this function is considered "alpha" and may get deleted or replaced with a different "helper" function.
 func (t *Test) DeleteDeployment(d *appsv1.Deployment, timeout time.Duration) {
 	t.Test.DeleteDeployment(d)
-	t.Test.WaitForDeploymentDeleted(d, timeout)
+	t.WaitForDeploymentDeleted(d, timeout)
 }
 
 // Close should be called at the end of each test case
