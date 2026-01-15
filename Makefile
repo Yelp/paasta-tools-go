@@ -71,6 +71,9 @@ deb_%: clean docker_build_%
 itest_%: deb_%
 	@echo "Built package for $*"
 
+install-hooks:
+	tox -e pre-commit
+
 openapi-codegen:
 	rm -rf pkg/paastaapi
 	mkdir -p pkg/paastaapi
