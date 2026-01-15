@@ -1,3 +1,9 @@
+ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
+	PAASTA_ENV ?= YELP
+else
+	PAASTA_ENV ?= $(shell hostname --fqdn)
+endif
+
 DOCKER_RUN=docker run -t -v $(CURDIR):/work:rw paasta-deb-builder-$*
 CMDS=$(wildcard cmd/*)
 UID:=$(shell id -u)
@@ -6,15 +12,28 @@ GID:=$(shell id -g)
 GO_VERSION=1.12.7
 VERSION=0.0.22
 
-GOBUILD=CGO_ENABLED=0 GO111MODULE=on go build -ldflags="\
+ifeq ($(PAASTA_ENV),YELP)
+	GO_TAGS=-tags yelp
+	GO_MODFILE=-modfile int.mod
+	GO_ENV=GONOSUMDB=*.yelpcorp.com GOPROXY=http://athens.paasta-norcal-devc.yelp GOPRIVATE=*github.yelpcorp.com
+else
+	GO_TAGS=
+	GO_MODFILE=
+	GO_ENV=
+endif
+
+GOBUILD=$(GO_ENV) CGO_ENABLED=0 GO111MODULE=on go build $(GO_TAGS) $(GO_MODFILE) -ldflags="\
 	-X github.com/Yelp/paasta-tools-go/pkg/version.Version=$(VERSION) \
 	-X github.com/Yelp/paasta-tools-go/pkg/version.PaastaVersion=$(PAASTA_VERSION)"
+
+GOTEST=$(GO_ENV) GO111MODULE=on go test $(GO_TAGS) $(GO_MODFILE)
 
 .PHONY: cmd $(CMDS)
 
 all: build test
 test:
-	GO111MODULE=on go test -failfast -v ./...
+
+	$(GOTEST) -failfast -v ./...
 
 build:
 	$(GOBUILD) -v ./...
@@ -22,6 +41,8 @@ build:
 clean:
 	rm -rf bin
 	rm -rf dist/*
+	rm -f paasta_go
+	go clean -testcache
 
 cmd: cmd/*
 
@@ -63,13 +84,7 @@ openapi-codegen:
 	@echo "Do not forget to 'git add' and 'git commit' updated oapi.yaml and paasta-api"
 
 paasta_go:
-ifeq ($(PAASTA_ENV),YELP)
-	GONOSUMDB=*.yelpcorp.com \
-	GOPROXY=http://athens.paasta-norcal-devc.yelp \
-	$(GOBUILD) -tags yelp -modfile int.mod -v -o paasta_go ./cmd/paasta
-else
 	$(GOBUILD) -v -o paasta_go ./cmd/paasta
-endif
 
 # Steps to release
 # 1. Bump version in Makefile

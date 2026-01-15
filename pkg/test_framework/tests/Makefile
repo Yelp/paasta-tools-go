@@ -1,13 +1,15 @@
 itest-env:
-	echo "export KUBECONFIG=$(shell mktemp /tmp/kube_XXXX.yaml)"
+	echo "export KUBECONFIG=$(shell mktemp /tmp/kube_XXXXXX)"
 	echo "export CLUSTER=itest-$(shell xxd -p -l4 /dev/urandom)"
-	echo "export CIDFILE=$(shell mktemp /tmp/kube_XXXX.txt)"
+	echo "export CIDFILE=$(shell mktemp /tmp/kube_XXXXXX)"
 	echo "export K3DIMAGE=itest-$(shell xxd -p -l4 /dev/urandom)"
 
 itest-cluster-start:
 	docker build -t $${K3DIMAGE} .
 	rm -f $${CIDFILE}
-	docker container run -d --init --net=host --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
+# 	Making sure that we run using docker since k3d does not support podman
+# 	https://github.com/k3d-io/k3d/issues/1379
+	docker container run -d --init --net=host --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST=unix:///var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'python3 port_reserve.py > port.txt && rm port_reserve.py'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d --trace cluster delete $${CLUSTER} &>/dev/null || echo -n'
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'k3d --trace cluster create $${CLUSTER} --api-port $$(cat port.txt) --wait --timeout 30s && rm port.txt'
