@@ -15,7 +15,7 @@ VERSION=0.0.22
 ifeq ($(PAASTA_ENV),YELP)
 	GO_TAGS=-tags yelp
 	GO_MODFILE=-modfile int.mod
-	GO_ENV=GONOSUMDB=*.yelpcorp.com GOPROXY=http://athens.paasta-norcal-devc.yelp GOPRIVATE=*github.yelpcorp.com
+	GO_ENV=GONOSUMDB=*.yelpcorp.com GOPROXY=http://athens.paasta-norcal-devc.yelp GOPRIVATE=*github.yelpcorp.com GONOPROXY=http://github.yelpcorp.com/ GIT_CONFIG=.gitconfig
 else
 	GO_TAGS=
 	GO_MODFILE=
