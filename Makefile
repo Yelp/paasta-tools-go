@@ -9,7 +9,7 @@ CMDS=$(wildcard cmd/*)
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
-GO_VERSION=1.12.7
+GO_VERSION=1.21.5
 VERSION=0.0.22
 
 ifeq ($(PAASTA_ENV),YELP)
