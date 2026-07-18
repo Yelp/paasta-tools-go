@@ -2,7 +2,7 @@ module github.com/Yelp/paasta-tools-go
 
 require (
 	github.com/dlespiau/kube-test-harness v0.0.0-20200730130322-72c5b0037f4a
-	github.com/golang/glog v1.0.0
+	github.com/golang/glog v1.2.4
 	github.com/mitchellh/mapstructure v1.4.1
 	github.com/openzipkin/zipkin-go v0.2.2
 	github.com/pmezard/go-difflib v1.0.0
@@ -14,11 +14,11 @@ require (
 	k8s.io/apimachinery v0.29.15
 	k8s.io/client-go v0.29.15
 	k8s.io/klog v1.0.0
+	k8s.io/klog/v2 v2.110.1
 	sigs.k8s.io/controller-runtime v0.17.0
 )
 
 require (
-	git.apache.org/thrift.git v0.0.0-20171203172758-327ebb6c2b6d // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
 	github.com/evanphx/json-patch/v5 v5.8.0 // indirect
@@ -50,7 +50,6 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/klog/v2 v2.110.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20231010175941-2dd684a91f00 // indirect
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
