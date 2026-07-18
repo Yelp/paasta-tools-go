@@ -1,0 +1,14 @@
+---
+name: paasta-tools-go-ci
+on: [push, release]
+jobs:
+  make:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: '^1.15.7'
+      - run: make all
