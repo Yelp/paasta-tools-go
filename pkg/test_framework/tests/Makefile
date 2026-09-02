@@ -7,12 +7,12 @@ itest-env:
 itest-cluster-start:
 	docker build -t $${K3DIMAGE} .
 	rm -f $${CIDFILE}
-ifdef CI
-	# jenkins uses DOCKER_HOST, so make sure it's passed there
+ifdef DOCKER_HOST
+	# Jenkins sets DOCKER_HOST; pass it through so k3d inside the container can reach the daemon
 	docker container run -d --init --net=host --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST $${K3DIMAGE} /bin/sleep infinity
 else
-# 	Making sure that we run using docker since k3d does not support podman
-# 	https://github.com/k3d-io/k3d/issues/1379
+	# Mount the host Docker socket (GH Actions, local dev, etc.)
+	# k3d does not support podman: https://github.com/k3d-io/k3d/issues/1379
 	docker container run -d --init --net=host --cidfile $${CIDFILE} -e CLUSTER=$${CLUSTER} -e DOCKER_HOST=unix:///var/run/docker.sock -v /var/run/docker.sock:/var/run/docker.sock $${K3DIMAGE} /bin/sleep infinity
 endif
 	docker container exec $$(cat $${CIDFILE}) /bin/bash -c 'python3 port_reserve.py > port.txt && rm port_reserve.py'
