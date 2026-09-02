@@ -2,6 +2,7 @@ package framework
 
 import (
 	"context"
+	"net"
 	"runtime"
 	"testing"
 	"time"
@@ -16,6 +17,13 @@ func TestWaitFor_Basic(t *testing.T) {
 		t.Skip("This test is meant to run on Linux only")
 		return
 	}
+	// k3d needs a working Docker daemon — skip if it's not reachable
+	conn, err := net.DialTimeout("unix", "/var/run/docker.sock", 2*time.Second)
+	if err != nil {
+		t.Skip("Docker daemon not available, skipping k3d test")
+		return
+	}
+	conn.Close()
 	options := *newOptions(DefaultPrefix("itest"))
 	Start(options, nil, nil)
 	defer Kube.Close()
