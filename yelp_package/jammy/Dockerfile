@@ -13,12 +13,13 @@ RUN apt-get -q update && \
         build-essential \
     && apt-get -q clean
 
-# Install go
-RUN wget http://godeb.s3.amazonaws.com/godeb-amd64.tar.gz && \
-    tar zxvf godeb-amd64.tar.gz && \
-    ./godeb download ${GO_VERSION} && \
-    dpkg -i go_${GO_VERSION}-godeb1_amd64.deb && \
-    rm godeb-amd64.tar.gz godeb go_${GO_VERSION}-godeb1_amd64.deb
+# Install go (supports amd64 and arm64)
+RUN ARCH=$(dpkg --print-architecture) && \
+    wget https://go.dev/dl/go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    tar -C /usr/local -xzf go${GO_VERSION}.linux-${ARCH}.tar.gz && \
+    rm go${GO_VERSION}.linux-${ARCH}.tar.gz
+
+ENV PATH="/usr/local/go/bin:${PATH}"
 
 RUN gem install fpm
 
