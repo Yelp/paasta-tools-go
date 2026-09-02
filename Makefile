@@ -10,6 +10,10 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 GO_VERSION=1.21.5
+# sha256 checksums for go.dev tarball verification (per architecture)
+GO_SHA256_amd64=e2bc0b3e4b64111ec117295c088bde5f00eeed1567999ff77bc859d7df70078e
+GO_SHA256_arm64=841cced7ecda9b2014f139f5bab5ae31785f35399f236b8b3e75dff2a2978d96
+GO_SHA256=$(GO_SHA256_$(shell dpkg --print-architecture))
 VERSION=0.0.22
 
 ifeq ($(PAASTA_ENV),YELP)
@@ -42,7 +46,7 @@ clean:
 	rm -rf bin
 	rm -rf dist/*
 	rm -f paasta_go
-	go clean -testcache
+	-go clean -testcache
 
 cmd: cmd/*
 
@@ -53,7 +57,7 @@ $(CMDS):
 docker_build_%:
 	@echo "Building build docker image for $*"
 	[ -d dist/$* ] || mkdir -p dist/$*
-	cd ./yelp_package/$* && docker build --build-arg GO_VERSION=$(GO_VERSION) -t paasta-deb-builder-$* .
+	cd ./yelp_package/$* && docker build --build-arg GO_VERSION=$(GO_VERSION) --build-arg GO_SHA256=$(GO_SHA256) -t paasta-deb-builder-$* .
 
 deb_%: clean docker_build_%
 	$(DOCKER_RUN) /bin/bash -c ' \
